@@ -1,0 +1,23 @@
+{
+  "name": "miranda",
+  "version": "0.0.1",
+  "description": "Miranda Document Download",
+  "main": "bookmarklet.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sswayney/Miranda.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/sswayney/Miranda/issues"
+  },
+  "homepage": "https://github.com/sswayney/Miranda#readme",
+  "devDependencies": {
+    "jquery": "1.9.1",
+    "jquery-ui": "1.13.2"
+  }
+}
