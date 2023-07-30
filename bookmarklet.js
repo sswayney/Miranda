@@ -8,7 +8,7 @@ javascript: (function() {
     if (isCorrectSite && isCorrectPage) {
         alert('Init Miranda Document Downloader.');
         console.log('Init Miranda Document Downloader...');
-        var cachBustUrl = 'https://raw.githubusercontent.com/sswayney/Miranda/dev/miranda.js?' + (new Date().getDate());
+        var cachBustUrl = 'https://raw.githubusercontent.com/sswayney/Miranda/dev/miranda.js?' + (new Date().getMilliseconds());
         fetch(cachBustUrl).then(function(response) {
             return response.text();
         }).then(function(data) {
