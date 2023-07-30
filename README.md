@@ -5,4 +5,4 @@ A utility used to download multiple documents from a site.
 
 ## Installation
 
-[![Install Miranda](https://i.imgur.com/c0s8Mm2.png)](https://codepen.io/j0be/full/WMBWOW/)
+[![Install Miranda](https://imgur.com/xtQE47T.png)](https://codepen.io/sswayney/full/MWzZggV/)
