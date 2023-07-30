@@ -137,21 +137,28 @@ const mdd = {
                     document.body.removeChild(modal);
                 }
 
+                console.log(`Close the modal if the user clicks outside of it`);
+                window.addEventListener("click", (event) => {
+                    if (event.target === modal) {
+                        closeModal();
+                    }
+                });
+
                 console.log(`Function to handle form submission`);
                 submitBtn.addEventListener("click", () => {
                     const name = nameInput.value;
                     const age = ageInput.value;
                     console.log("Name: ", name);
                     console.log("Age: ", age);
-                    mdd.actions.getDocumentList();
-                    closeModal();
-                });
+                    mdd.actions.getDocumentList().done(function (response) {
+                        console.info('Got document list');
+                        console.log(response);
+                        mdd.actions.downloadDocuments(response.data);
+                    }).fail(function (response) {
+                        console.error(`Error while getting documents`);
+                        console.log(response);
+                    });
 
-                 console.log(`Close the modal if the user clicks outside of it`);
-                window.addEventListener("click", (event) => {
-                    if (event.target === modal) {
-                        closeModal();
-                    }
                 });
             }
     },
@@ -287,9 +294,17 @@ const mdd = {
                 }
             };
 
-            $.ajax(settings).done(function (response) {
-                console.log(response);
-            });
+            return $.ajax(settings);
+
+        },
+        downloadDocuments: function (dataRay) {
+            console.info(`downloadDocuments`);
+            console.log(dataRay);
+            for(let i = 0; dataRay.length > i; i++){
+                const userName = $(dataRay[i]['eename'])[0].innerText;
+                const srcFileName = dataRay[i]['srcfile_desc'];
+                console.log(userName, srcFileName);
+            }
 
         },
 
