@@ -54,7 +54,7 @@ const mdd = {
         location: function () {
             return document.location.hostname.split('.').slice(-2).join('.') == mdd.siteName &&
                 document.location.href.includes(mdd.pageName) &&
-                $('#clientLogout').exists();
+                ($('#clientLogout').val().length > 0)
         }
     },
     setup: {
