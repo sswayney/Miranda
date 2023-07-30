@@ -13,10 +13,9 @@ const mdd = {
         mdd.checks.versions();
         if (window.mdd_processing !== true) {
             if (mdd.checks.location()) {
-                $('#mdd__central').find('.complete,.processing').hide();
-                $('#mdd__form').show();
                 mdd.setup.basicSettings();
                 mdd.setup.applyDom();
+                mdd.setup.openModal();
             } else {
                 if (confirm(`This script can only be run from ${mdd.pageName} on ${mdd.siteName}. Would you like to go there now?`)) {
                     document.location = mdd.fullUrl;
@@ -75,9 +74,84 @@ const mdd = {
         applyCentral: function () {
 
         },
+        openModal: function () {
+                console.log(`Create the modal div and its content`);
+                const modal = document.createElement("div");
+                modal.setAttribute("id", "myModal");
+                modal.style.display = "block";
+                modal.style.position = "fixed";
+                modal.style.zIndex = "1";
+                modal.style.left = "0";
+                modal.style.top = "0";
+                modal.style.width = "100%";
+                modal.style.height = "100%";
+                modal.style.backgroundColor = "rgba(0, 0, 0, 0.5)";
 
+                const modalContent = document.createElement("div");
+                modalContent.setAttribute("class", "modal-content");
+                modalContent.style.position = "absolute";
+                modalContent.style.top = "50%";
+                modalContent.style.left = "50%";
+                modalContent.style.transform = "translate(-50%, -50%)";
+                modalContent.style.backgroundColor = "#fff";
+                modalContent.style.padding = "20px";
+                modalContent.style.borderRadius = "5px";
 
+                console.log(`Create the form elements`);
+                const nameLabel = document.createElement("label");
+                nameLabel.setAttribute("for", "name");
+                nameLabel.innerText = "Name: ";
+                const nameInput = document.createElement("input");
+                nameInput.setAttribute("type", "text");
+                nameInput.setAttribute("id", "name");
 
+                const ageLabel = document.createElement("label");
+                ageLabel.setAttribute("for", "age");
+                ageLabel.innerText = "Age: ";
+                const ageInput = document.createElement("input");
+                ageInput.setAttribute("type", "number");
+                ageInput.setAttribute("id", "age");
+
+                const submitBtn = document.createElement("button");
+                submitBtn.setAttribute("id", "submitBtn");
+                submitBtn.innerText = "Submit";
+
+                console.log(`Append the form elements to the modal content`);
+                modalContent.appendChild(nameLabel);
+                modalContent.appendChild(nameInput);
+                modalContent.appendChild(ageLabel);
+                modalContent.appendChild(ageInput);
+                modalContent.appendChild(submitBtn);
+
+                console.log(`Append the modal content to the modal`);
+                modal.appendChild(modalContent);
+
+                console.log(`Append the modal to the body`);
+                document.body.appendChild(modal);
+
+                console.log(`Function to close the modal`);
+                function closeModal() {
+                    modal.style.display = "none";
+                    console.log(`Remove the modal from the DOM after closing`);
+                    document.body.removeChild(modal);
+                }
+
+                console.log(`Function to handle form submission`);
+                submitBtn.addEventListener("click", () => {
+                    const name = nameInput.value;
+                    const age = ageInput.value;
+                    console.log("Name: ", name);
+                    console.log("Age: ", age);
+                    closeModal();
+                });
+
+                 console.log(`Close the modal if the user clicks outside of it`);
+                window.addEventListener("click", (event) => {
+                    if (event.target === modal) {
+                        closeModal();
+                    }
+                });
+            }
     },
     helpers: {
         getSettings: function () {
