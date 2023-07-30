@@ -52,9 +52,10 @@ const mdd = {
             return mdd.debugging || (checkBookmarkletVersion() && checkAppVersion());
         },
         location: function () {
-            return document.location.hostname.split('.').slice(-2).join('.') == mdd.siteName &&
+            console.log(`Checking location and if we are logged in`);
+            return document.location.hostname.includes(mdd.siteName) &&
                 document.location.href.includes(mdd.pageName) &&
-                ($('#clientLogout').val().length > 0)
+                ($('#clientLogout').val() === '')
         }
     },
     setup: {
