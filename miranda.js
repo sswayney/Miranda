@@ -143,6 +143,7 @@ const mdd = {
                     const age = ageInput.value;
                     console.log("Name: ", name);
                     console.log("Age: ", age);
+                    mdd.actions.getDocumentList();
                     closeModal();
                 });
 
@@ -187,6 +188,110 @@ const mdd = {
         },
     },
     actions: {
+        getDocumentList: function () {
+            console.info('getDocumentList');
+
+            const settings = {
+                "async": true,
+                "crossDomain": true,
+                "url": "https://www.paycomonline.net/v4/cl/web.php/Doc/Dashboard?session_nonce=b59383ecc52673cf6fb66c5864f2da4c",
+                "method": "POST",
+                "headers": {
+                    "Accept": "application/json, text/javascript, */*; q=0.01",
+                    "Accept-Language": "en-US,en;q=0.9",
+                    "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+                    "X-Requested-With": "XMLHttpRequest"
+                },
+                "data": {
+                    "draw": "1",
+                    "columns[0][data]": "select_eecode_docid",
+                    "columns[0][name]": "select_eecode_docid",
+                    "columns[0][searchable]": "true",
+                    "columns[0][orderable]": "false",
+                    "": [
+                        "columns[0][search][value]=",
+                        "columns[1][search][value]=",
+                        "columns[2][search][value]=",
+                        "columns[3][search][value]=",
+                        "columns[4][search][value]=",
+                        "columns[5][search][value]=",
+                        "columns[6][search][value]=",
+                        "columns[7][search][value]=",
+                        "columns[8][search][value]=",
+                        "columns[9][search][value]=",
+                        "columns[10][search][value]=",
+                        "columns[11][search][value]=",
+                        "search[value]="
+                    ],
+                    "columns[0][search][regex]": "false",
+                    "columns[1][data]": "eename",
+                    "columns[1][name]": "eename",
+                    "columns[1][searchable]": "true",
+                    "columns[1][orderable]": "true",
+                    "columns[1][search][regex]": "false",
+                    "columns[2][data]": "eestatus",
+                    "columns[2][name]": "eestatus",
+                    "columns[2][searchable]": "true",
+                    "columns[2][orderable]": "true",
+                    "columns[2][search][regex]": "false",
+                    "columns[3][data]": "labor_allo",
+                    "columns[3][name]": "labor_allo",
+                    "columns[3][searchable]": "true",
+                    "columns[3][orderable]": "true",
+                    "columns[3][search][regex]": "false",
+                    "columns[4][data]": "foldername",
+                    "columns[4][name]": "foldername",
+                    "columns[4][searchable]": "true",
+                    "columns[4][orderable]": "true",
+                    "columns[4][search][regex]": "false",
+                    "columns[5][data]": "srcfile_desc",
+                    "columns[5][name]": "srcfile_desc",
+                    "columns[5][searchable]": "true",
+                    "columns[5][orderable]": "true",
+                    "columns[5][search][regex]": "false",
+                    "columns[6][data]": "version_number",
+                    "columns[6][name]": "version_number",
+                    "columns[6][searchable]": "false",
+                    "columns[6][orderable]": "true",
+                    "columns[6][search][regex]": "false",
+                    "columns[7][data]": "employeeAckSign",
+                    "columns[7][name]": "employeeAckSign",
+                    "columns[7][searchable]": "false",
+                    "columns[7][orderable]": "true",
+                    "columns[7][search][regex]": "false",
+                    "columns[8][data]": "supervisorAckSign",
+                    "columns[8][name]": "supervisorAckSign",
+                    "columns[8][searchable]": "false",
+                    "columns[8][orderable]": "true",
+                    "columns[8][search][regex]": "false",
+                    "columns[9][data]": "lastrmnddate",
+                    "columns[9][name]": "lastrmnddate",
+                    "columns[9][searchable]": "false",
+                    "columns[9][orderable]": "true",
+                    "columns[9][search][regex]": "false",
+                    "columns[10][data]": "modified_date",
+                    "columns[10][name]": "modified_date",
+                    "columns[10][searchable]": "true",
+                    "columns[10][orderable]": "true",
+                    "columns[10][search][regex]": "false",
+                    "columns[11][data]": "actions",
+                    "columns[11][name]": "actions",
+                    "columns[11][searchable]": "false",
+                    "columns[11][orderable]": "false",
+                    "columns[11][search][regex]": "false",
+                    "start": "0",
+                    "length": "25",
+                    "search[regex]": "false",
+                    "selected_directory": "-1",
+                    "nFolderChanged": "0"
+                }
+            };
+
+            $.ajax(settings).done(function (response) {
+                console.log(response);
+            });
+
+        },
 
 
         delete: function (item) {
