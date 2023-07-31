@@ -151,30 +151,37 @@ const mdd = {
                     const age = ageInput.value;
                     console.log("Name: ", name);
                     console.log("Age: ", age);
-                    let response = await mdd.actions.getDocumentList(0, mdd.pageBy).promise();
-                    const fileNameDownloadUrlList = [];
-                    const recordsTotal = +response['recordsTotal'];
-                    let currentRecordCount = response.data.length;
-                    let currentStart = 0;
 
+                    const fileNameDownloadUrlList = [];
+                    let currentStart = 0;
+                    let currentRecordCount = 0;
+                    let response = await mdd.actions.getDocumentList(currentStart, mdd.pageBy).promise();
                     console.log(response);
+                    const recordsTotal = +response['recordsTotal'];
 
                     if(recordsTotal < 1){
                         alert('Zero documents found');
                         return;
                     }
 
-
-                    while (recordsTotal > 0 && currentRecordCount <= recordsTotal) {
-                        console.info(`Got document list
+                    console.info(`Got document list
                         recordsTotal: ${recordsTotal},
                         currentRecordCount: ${currentRecordCount},
                         currentStart: ${currentStart}`);
-                        fileNameDownloadUrlList.unshift(...mdd.actions.getFileNameUrlList(response));
+                    fileNameDownloadUrlList.unshift(...mdd.actions.getFileNameUrlList(response));
+                    currentRecordCount += response.data.length;
+
+                    while (recordsTotal > 0 && currentRecordCount < recordsTotal) {
                         currentStart += mdd.pageBy;
+                        console.info(`Getting next page
+                        recordsTotal: ${recordsTotal},
+                        currentRecordCount: ${currentRecordCount},
+                        currentStart: ${currentStart}`);
                         response = await mdd.actions.getDocumentList(currentStart,mdd.pageBy).promise();
+                        fileNameDownloadUrlList.unshift(...mdd.actions.getFileNameUrlList(response));
                         currentRecordCount += response.data.length;
                     }
+                    debugger;
                     console.info(`All document file data needed to download attained.`);
                     console.log(fileNameDownloadUrlList);
                 });
