@@ -388,24 +388,28 @@ const mdd = {
                     "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
                     "Accept-Language": "en-US,en;q=0.9",
                     "Upgrade-Insecure-Requests": "1"
+                },
+                success: function (response, textStatus, xhr) {
+                    debugger;
+
+                    const contentDispositionHeader = xhr.getResponseHeader('Content-Disposition');
+                    const match = contentDispositionHeader.match(/filename="(.+)"/);
+                    const fileName = match && match[1] ? match[1] : 'download.pdf';
+
+
+                    const blob = new Blob([response], { type: 'application/pdf' });
+                    const link = document.createElement('a');
+                    link.href = window.URL.createObjectURL(blob);
+                    link.download = fileName;
+                    link.click();
+
+                },
+                error: function(jqXHR, textStatus, errorThrown){
+                    console.log(textStatus + ": " + jqXHR.status + " " + errorThrown);
                 }
             };
             debugger;
-            $.ajax(settings).success(function (response, textStatus, xhr) {
-                debugger;
-
-                const contentDispositionHeader = xhr.getResponseHeader('Content-Disposition');
-                const match = contentDispositionHeader.match(/filename="(.+)"/);
-                const fileName = match && match[1] ? match[1] : 'download.pdf';
-
-
-                const blob = new Blob([response], { type: 'application/pdf' });
-                const link = document.createElement('a');
-                link.href = window.URL.createObjectURL(blob);
-                link.download = fileName;
-                link.click();
-
-            });
+            $.ajax(settings);
         },
 
 
