@@ -183,7 +183,7 @@ const mdd = {
                         fileNameDownloadUrlList.unshift(...mdd.actions.getFileNameUrlList(response));
                         currentRecordCount += response.data.length;
                     }
-                    debugger;
+
                     console.info(`All document file data needed to download attained.`);
                     console.log(fileNameDownloadUrlList);
                     if(fileNameDownloadUrlList.length !== recordsTotal){
@@ -192,6 +192,7 @@ const mdd = {
 
                     const fileNameUrlObj = fileNameDownloadUrlList[0];
                     let fileName = fileNameUrlObj.fileName;
+                    debugger;
                    mdd.actions.downloadDocument(fileNameUrlObj.downloadUrl, fileName);
 
 
@@ -374,6 +375,7 @@ const mdd = {
             return fileNameDownloadUrlList;
         },
         downloadDocument: function (downloadUrl, fileName) {
+            debugger;
             const settings = {
                 "xhrFields": {
                     "responseType": "blob"
@@ -388,8 +390,9 @@ const mdd = {
                     "Upgrade-Insecure-Requests": "1"
                 }
             };
-
-            $.ajax(settings).done(function (response, textStatus, xhr) {
+            debugger;
+            $.ajax(settings).success(function (response, textStatus, xhr) {
+                debugger;
 
                 const contentDispositionHeader = xhr.getResponseHeader('Content-Disposition');
                 const match = contentDispositionHeader.match(/filename="(.+)"/);
