@@ -6,6 +6,7 @@ const mdd = {
     pageName: 'Dashboard',
     fullUrl: `https://www.paycomonline.net/v4/cl/web.php/Doc/Dashboard`,
     github: `https://github.com/sswayney/Miranda/tree/dev`,
+    pageBy: 25,
     endpoints: {
         dashboard: '/v4/cl/web.php/Doc/Dashboard'
     },
@@ -150,10 +151,28 @@ const mdd = {
                     const age = ageInput.value;
                     console.log("Name: ", name);
                     console.log("Age: ", age);
-                    mdd.actions.getDocumentList().done(function (response) {
-                        console.info('Got document list');
+                    mdd.actions.getDocumentList(0,mdd.pageBy).done(async function (response) {
+                        const fileNameDownloadUrlList = [];
+                        const recordsTotal = +response['recordsTotal'];
+                        let currentRecordCount = response.data.length;
+                        let currentStart = 0;
+                        console.info(`Got document list
+                        recordsTotal: ${recordsTotal},
+                        currentRecordCount: ${currentRecordCount},
+                        currentStart: ${currentStart}`);
                         console.log(response);
-                        mdd.actions.downloadDocuments(response.data);
+
+
+                        if (recordsTotal > 0 && currentRecordCount < recordsTotal) {
+
+                            fileNameDownloadUrlList.unshift(...mdd.actions.getFileNameUrlList(response));
+                            currentStart += mdd.pageBy;
+                            response = await mdd.actions.getDocumentList(currentStart,mdd.pageBy).promise();
+                            debugger;
+                            currentRecordCount += response.data.length;
+                        } else {
+                            alert('Zero documents found');
+                        }
                     }).fail(function (response) {
                         console.error(`Error while getting documents`);
                         console.log(response);
@@ -205,7 +224,7 @@ const mdd = {
 
     },
     actions: {
-        getDocumentList: function () {
+        getDocumentList: function (start, length) {
             console.info('getDocumentList');
 
             const settings = {
@@ -296,8 +315,8 @@ const mdd = {
                     "columns[11][searchable]": "false",
                     "columns[11][orderable]": "false",
                     "columns[11][search][regex]": "false",
-                    "start": "0",
-                    "length": "500",
+                    "start": ''+start,
+                    "length": ''+length,
                     "search[regex]": "false",
                     "selected_directory": "-1",
                     "nFolderChanged": "0"
@@ -307,29 +326,33 @@ const mdd = {
             return $.ajax(settings);
 
         },
-        downloadDocuments: function (dataRay) {
-            console.info(`downloadDocuments`);
+        getFileNameUrlList: function (response) {
+            const dataRay = response.data;
+            const fileNameDownloadUrlList = [];
+            console.info(`getFileNameUrlList`);
             console.log(dataRay);
             for(let i = 0; dataRay.length > i; i++){
                 const userName = $(dataRay[i]['eename'])[0].innerText;
-                if(mdd.helpers.isHTML(userName)){
-                    console.error(`Could not get user name - is html`);
-                }
                 let srcFileName = dataRay[i]['srcfile_desc'];
                 if(srcFileName.includes('<div')){
                     srcFileName = $(srcFileName)[0].innerText;
                 }
+                const downloadUrl = $(dataRay[i]['actions']).find("a:contains('Download Document')").attr("href");
+
+
+                if(mdd.helpers.isHTML(userName)){
+                    console.error(`Could not get user name - is html`);
+                }
                 if(mdd.helpers.isHTML(srcFileName)){
                     console.error(`Could not get source file name - is html`);
                 }
-                const downloadUrl = $(dataRay[i]['actions']).find("a:contains('Download Document')").attr("href");
                 if(mdd.helpers.isHTML(downloadUrl)){
                     console.error(`Could not get download url - is html`);
                 }
                 console.log(userName, srcFileName, downloadUrl);
-
+                fileNameDownloadUrlList.unshift({fileName: `${userName}-${srcFileName}`, downloadUrl: downloadUrl});
             }
-
+            return fileNameDownloadUrlList;
         },
         downloadDocument: function (url) {
 
