@@ -194,7 +194,7 @@ const mdd = {
                    let file = await mdd.actions.downloadDocument(fileNameUrlObj.downloadUrl).promise();
                    let fileName = fileNameUrlObj.fileName;
                    debugger;
-                    const blob = new Blob([file], {type: 'application/pdf'});
+                    const blob = new Blob([file], {type: 'application/octet-stream'});
                     const link = document.createElement('a');
                     link.href = window.URL.createObjectURL(blob);
                     link.download = fileName;
@@ -379,6 +379,7 @@ const mdd = {
         },
         downloadDocument: function (downloadUrl) {
             const settings = {
+                "xhrFields": {responseType: "blob"},
                 "async": true,
                 "crossDomain": true,
                 "url": `${mdd.endpoints.baseUrl}${downloadUrl}`,
