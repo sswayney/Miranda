@@ -193,6 +193,16 @@ const mdd = {
                 localStorage.removeItem('mdd_storage');
             }
         },
+        isHTML: function (str) {
+            const fragment = document.createRange().createContextualFragment(str);
+
+            // remove all non text nodes from fragment
+            fragment.querySelectorAll('*').forEach(el => el.parentNode.removeChild(el));
+
+            // if there is textContent, then not a pure HTML
+            return !(fragment.textContent || '').trim();
+        }
+
     },
     actions: {
         getDocumentList: function () {
@@ -302,9 +312,21 @@ const mdd = {
             console.log(dataRay);
             for(let i = 0; dataRay.length > i; i++){
                 const userName = $(dataRay[i]['eename'])[0].innerText;
-                const srcFileName = dataRay[i]['srcfile_desc'];
-                const downloadUrl = $($(dataRay[i]['actions']).find('a')[2]).attr('href');
-                console.log(userName, srcFileName,downloadUrl);
+                if(mdd.helpers.isHTML(userName)){
+                    console.error(`Could not get user name - is html`);
+                }
+                let srcFileName = dataRay[i]['srcfile_desc'];
+                if(srcFileName.includes('<div')){
+                    srcFileName = $(srcFileName)[0].innerText;
+                }
+                if(mdd.helpers.isHTML(srcFileName)){
+                    console.error(`Could not get source file name - is html`);
+                }
+                const downloadUrl = $(dataRay[i]['actions']).find("a:contains('Download Document')").attr("href");
+                if(mdd.helpers.isHTML(downloadUrl)){
+                    console.error(`Could not get download url - is html`);
+                }
+                console.log(userName, srcFileName, downloadUrl);
 
             }
 
