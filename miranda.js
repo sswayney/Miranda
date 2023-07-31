@@ -287,7 +287,7 @@ const mdd = {
                     "columns[11][orderable]": "false",
                     "columns[11][search][regex]": "false",
                     "start": "0",
-                    "length": "25",
+                    "length": "500",
                     "search[regex]": "false",
                     "selected_directory": "-1",
                     "nFolderChanged": "0"
@@ -303,8 +303,35 @@ const mdd = {
             for(let i = 0; dataRay.length > i; i++){
                 const userName = $(dataRay[i]['eename'])[0].innerText;
                 const srcFileName = dataRay[i]['srcfile_desc'];
-                console.log(userName, srcFileName);
+                const downloadUrl = $($(dataRay[i]['actions']).find('a')[2]).attr('href');
+                console.log(userName, srcFileName,downloadUrl);
+
             }
+
+        },
+        downloadDocument: function (url) {
+
+
+            const settings = {
+                "async": true,
+                "crossDomain": true,
+                "url": "https://www.paycomonline.net/v4/cl/web.php/Doc/Download/index?srctype=1&folderid=99359&eecode=A002&docid=2243691&fhsh=fl64c6f620230730184647&doc_dash=1&downloadfile=1",
+                "method": "GET",
+                "headers": {
+                    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
+                    "Accept-Language": "en-US,en;q=0.9",
+                    "Referer": "https://www.paycomonline.net/v4/cl/web.php/Doc/Dashboard?session_nonce=b59383ecc52673cf6fb66c5864f2da4c",
+                    "Upgrade-Insecure-Requests": "1"
+                }
+            };
+
+            $.ajax(settings).done(function (response) {
+                console.log(response);
+            });
+
+
+
+
 
         },
 
