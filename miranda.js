@@ -8,8 +8,10 @@ const mdd = {
     github: `https://github.com/sswayney/Miranda/tree/dev`,
     pageBy: 25,
     endpoints: {
+        baseUrl: 'https://www.paycomonline.net',
         dashboard: '/v4/cl/web.php/Doc/Dashboard'
     },
+    session_nonce: $(`#session_nonce`).val(),
     init: function () {
         mdd.checks.versions();
         if (window.mdd_processing !== true) {
@@ -184,6 +186,16 @@ const mdd = {
                     debugger;
                     console.info(`All document file data needed to download attained.`);
                     console.log(fileNameDownloadUrlList);
+                    if(fileNameDownloadUrlList.length !== recordsTotal){
+                        alert(`Total record count doesn't match filesToDownload length`);
+                    }
+
+                    const fileNameUrlObj = fileNameDownloadUrlList[0];
+                   let file = await mdd.actions.downloadDocument(fileNameUrlObj.downloadUrl).promise();
+                   let fileName = fileNameUrlObj.fileName;
+                   debugger;
+
+
                 });
             }
     },
@@ -236,7 +248,7 @@ const mdd = {
             const settings = {
                 "async": true,
                 "crossDomain": true,
-                "url": "https://www.paycomonline.net/v4/cl/web.php/Doc/Dashboard?session_nonce=b59383ecc52673cf6fb66c5864f2da4c",
+                "url": `${mdd.endpoints.baseUrl}${mdd.endpoints.dashboard}?session_nonce=${mdd.session_nonce}`,
                 "method": "POST",
                 "headers": {
                     "Accept": "application/json, text/javascript, */*; q=0.01",
@@ -360,30 +372,20 @@ const mdd = {
             }
             return fileNameDownloadUrlList;
         },
-        downloadDocument: function (url) {
-
-
+        downloadDocument: function (downloadUrl) {
             const settings = {
                 "async": true,
                 "crossDomain": true,
-                "url": "https://www.paycomonline.net/v4/cl/web.php/Doc/Download/index?srctype=1&folderid=99359&eecode=A002&docid=2243691&fhsh=fl64c6f620230730184647&doc_dash=1&downloadfile=1",
+                "url": `${mdd.endpoints.baseUrl}${downloadUrl}`,
                 "method": "GET",
                 "headers": {
                     "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
                     "Accept-Language": "en-US,en;q=0.9",
-                    "Referer": "https://www.paycomonline.net/v4/cl/web.php/Doc/Dashboard?session_nonce=b59383ecc52673cf6fb66c5864f2da4c",
                     "Upgrade-Insecure-Requests": "1"
                 }
             };
 
-            $.ajax(settings).done(function (response) {
-                console.log(response);
-            });
-
-
-
-
-
+            return $.ajax(settings)
         },
 
 
