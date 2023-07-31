@@ -191,14 +191,10 @@ const mdd = {
                     }
 
                     const fileNameUrlObj = fileNameDownloadUrlList[0];
-                   let file = await mdd.actions.downloadDocument(fileNameUrlObj.downloadUrl).promise();
-                   let fileName = fileNameUrlObj.fileName;
-                   debugger;
-                    const blob = new Blob([file], { type: 'application/pdf' });
-                    const link = document.createElement('a');
-                    link.href = window.URL.createObjectURL(blob);
-                    link.download = fileName;
-                    link.click();
+                    let fileName = fileNameUrlObj.fileName;
+                   mdd.actions.downloadDocument(fileNameUrlObj.downloadUrl, fileName);
+
+
 
 
                 });
@@ -377,9 +373,11 @@ const mdd = {
             }
             return fileNameDownloadUrlList;
         },
-        downloadDocument: function (downloadUrl) {
+        downloadDocument: function (downloadUrl, fileName) {
             const settings = {
-                "responseType": "arraybuffer",
+                "xhrFields": {
+                    "responseType": "blob"
+                },
                 "async": true,
                 "crossDomain": true,
                 "url": `${mdd.endpoints.baseUrl}${downloadUrl}`,
@@ -391,7 +389,20 @@ const mdd = {
                 }
             };
 
-            return $.ajax(settings)
+            $.ajax(settings).done(function (response, textStatus, xhr) {
+
+                const contentDispositionHeader = xhr.getResponseHeader('Content-Disposition');
+                const match = contentDispositionHeader.match(/filename="(.+)"/);
+                const fileName = match && match[1] ? match[1] : 'download.pdf';
+
+
+                const blob = new Blob([response], { type: 'application/pdf' });
+                const link = document.createElement('a');
+                link.href = window.URL.createObjectURL(blob);
+                link.download = fileName;
+                link.click();
+
+            });
         },
 
 
