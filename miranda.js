@@ -365,27 +365,19 @@ const mdd = {
                 console.log(`Create the form elements`);
                 const nameLabel = document.createElement("label");
                 nameLabel.setAttribute("for", "name");
-                nameLabel.innerText = "Name: ";
+                nameLabel.innerText = "Zip File Name Prefix: ";
                 const nameInput = document.createElement("input");
                 nameInput.setAttribute("type", "text");
                 nameInput.setAttribute("id", "name");
 
-                const ageLabel = document.createElement("label");
-                ageLabel.setAttribute("for", "age");
-                ageLabel.innerText = "Age: ";
-                const ageInput = document.createElement("input");
-                ageInput.setAttribute("type", "number");
-                ageInput.setAttribute("id", "age");
 
                 const submitBtn = document.createElement("button");
                 submitBtn.setAttribute("id", "submitBtn");
-                submitBtn.innerText = "Submit";
+                submitBtn.innerText = "Download All";
 
                 console.log(`Append the form elements to the modal content`);
                 modalContent.appendChild(nameLabel);
                 modalContent.appendChild(nameInput);
-                modalContent.appendChild(ageLabel);
-                modalContent.appendChild(ageInput);
                 modalContent.appendChild(submitBtn);
 
                 console.log(`Append the modal content to the modal`);
@@ -393,6 +385,10 @@ const mdd = {
 
                 console.log(`Append the modal to the body`);
                 document.body.appendChild(modal);
+
+
+
+
 
                 console.log(`Function to close the modal`);
                 function closeModal() {
@@ -410,10 +406,9 @@ const mdd = {
 
                 console.log(`Function to handle form submission`);
                 submitBtn.addEventListener("click", async () => {
-                    const name = nameInput.value;
-                    const age = ageInput.value;
-                    console.log("Name: ", name);
-                    console.log("Age: ", age);
+                    const zipFileName = nameInput.value;
+
+                    console.log("zipFileName: ", name);
 
                     const fileNameDownloadUrlList = [];
                     let currentStart = 0;
@@ -474,8 +469,9 @@ const mdd = {
                     console.log(`Saving Zip File`);
                     zip.generateAsync({type:"blob"})
                         .then(function(content) {
-                            // see FileSaver.js
-                            saveAs(content, "example.zip");
+                            const now = new Date();
+                            const dateStr = `${now.getFullYear()}-${now.getMonth() + 1}-${now.getDate()}-${now.getHours()}-${now.getMinutes()}-${now.getSeconds()}`;
+                            saveAs(content, `${zipFileName}_${dateStr}`);
                         });
 
 
