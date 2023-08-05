@@ -1,91 +1,93 @@
+https://www.paycomonline.net/v4/cl/web.php/Doc/Download/index?srctype=1&folderid=99359&eecode=A002&docid=2243691&fhsh=fl64ce9a20230805135354&doc_dash=1&downloadfile=1
 
 
-// Function to create and open the modal
-function openModal() {
-    // Create the modal div and its content
-    const modal = document.createElement("div");
-    modal.setAttribute("id", "myModal");
-    modal.style.display = "block";
-    modal.style.position = "fixed";
-    modal.style.zIndex = "1";
-    modal.style.left = "0";
-    modal.style.top = "0";
-    modal.style.width = "100%";
-    modal.style.height = "100%";
-    modal.style.backgroundColor = "rgba(0, 0, 0, 0.5)";
 
-    const modalContent = document.createElement("div");
-    modalContent.setAttribute("class", "modal-content");
-    modalContent.style.position = "absolute";
-    modalContent.style.top = "50%";
-    modalContent.style.left = "50%";
-    modalContent.style.transform = "translate(-50%, -50%)";
-    modalContent.style.backgroundColor = "#fff";
-    modalContent.style.padding = "20px";
-    modalContent.style.borderRadius = "5px";
 
-    // Create the form elements
-    const nameLabel = document.createElement("label");
-    nameLabel.setAttribute("for", "name");
-    nameLabel.innerText = "Name: ";
-    const nameInput = document.createElement("input");
-    nameInput.setAttribute("type", "text");
-    nameInput.setAttribute("id", "name");
+    const settings = {
+        "responseType": 'arraybuffer',
 
-    const ageLabel = document.createElement("label");
-    ageLabel.setAttribute("for", "age");
-    ageLabel.innerText = "Age: ";
-    const ageInput = document.createElement("input");
-    ageInput.setAttribute("type", "number");
-    ageInput.setAttribute("id", "age");
+        "async": true,
+        "crossDomain": true,
+        "url": `https://www.paycomonline.net/v4/cl/web.php/Doc/Download/index?srctype=1&folderid=99359&eecode=A002&docid=2243691&fhsh=fl64ce9a20230805135354&doc_dash=1&downloadfile=1`,
+        "method": "GET",
+        "headers": {
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
+            "Accept-Language": "en-US,en;q=0.9",
+            "Upgrade-Insecure-Requests": "1"
+        },
+        success: function (response, textStatus, xhr) {
 
-    const submitBtn = document.createElement("button");
-    submitBtn.setAttribute("id", "submitBtn");
-    submitBtn.innerText = "Submit";
 
-    // Append the form elements to the modal content
-    modalContent.appendChild(nameLabel);
-    modalContent.appendChild(nameInput);
-    modalContent.appendChild(ageLabel);
-    modalContent.appendChild(ageInput);
-    modalContent.appendChild(submitBtn);
+            const contentDispositionHeader = xhr.getResponseHeader('Content-Disposition');
+            const match = contentDispositionHeader.match(/filename="(.+)"/);
+            const fileName = match && match[1] ? match[1] : 'download.pdf';
 
-    // Append the modal content to the modal
-    modal.appendChild(modalContent);
+            // function convertToByteArray(input) {
+            //     var sliceSize = 512;
+            //     var bytes = [];
+            //
+            //     for (var offset = 0; offset < input.length; offset += sliceSize) {
+            //         var slice = input.slice(offset, offset + sliceSize);
+            //
+            //         var byteNumbers = new Array(slice.length);
+            //
+            //         for (var i = 0; i < slice.length; i++) {
+            //             byteNumbers[i] = slice.charCodeAt(i);
+            //         }
+            //
+            //         const byteArray = new Uint8Array(byteNumbers);
+            //
+            //         bytes.push(byteArray);
+            //     }
+            //
+            //     return bytes;
+            // }
 
-    // Append the modal to the body
-    document.body.appendChild(modal);
+            debugger;
+            const blob = new Blob(response, {type: "application/pdf"});
+            const link = document.createElement('a');
+            link.href = window.URL.createObjectURL(blob);
+            link.download = fileName;
+            link.click();
 
-    // Function to close the modal
-    function closeModal() {
-        modal.style.display = "none";
-        // Remove the modal from the DOM after closing
-        document.body.removeChild(modal);
-    }
-
-    // Function to handle form submission
-    submitBtn.addEventListener("click", () => {
-        const name = nameInput.value;
-        const age = ageInput.value;
-        console.log("Name: ", name);
-        console.log("Age: ", age);
-        closeModal();
-    });
-
-    // Close the modal if the user clicks outside of it
-    window.addEventListener("click", (event) => {
-        if (event.target === modal) {
-            closeModal();
+        },
+        error: function(jqXHR, textStatus, errorThrown){
+            console.log(textStatus + ": " + jqXHR.status + " " + errorThrown);
         }
-    });
-}
-
-// Attach event listener to open the modal when the button is clicked
-const openModalBtn = document.getElementById("openModalBtn");
-openModalBtn.addEventListener("click", openModal);
+    };
+$.ajax(settings);
 
 
 
 
 
 
+
+
+
+
+
+
+
+
+
+const xhr = new XMLHttpRequest();
+xhr.withCredentials = true;
+xhr.responseType = 'arraybuffer';
+xhr.addEventListener("readystatechange", function () {
+    if (this.readyState === this.DONE) {
+        var blob=new Blob([this.response], {type:"application/pdf"});
+        var link=document.createElement('a');
+        link.href=window.URL.createObjectURL(blob);
+        link.download="Report_"+new Date()+".pdf";
+        link.click();
+    }
+});
+
+xhr.open("GET", "https://www.paycomonline.net/v4/cl/web.php/Doc/Download/index?srctype=1&folderid=99359&eecode=A003&docid=2247560&fhsh=fl64ce9a20230805135355&doc_dash=1&downloadfile=1");
+xhr.setRequestHeader("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7");
+xhr.setRequestHeader("Accept-Language", "en-US,en;q=0.9");
+xhr.setRequestHeader("Upgrade-Insecure-Requests", "1");
+
+
+xhr.send();

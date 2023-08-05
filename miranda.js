@@ -375,41 +375,27 @@ const mdd = {
             return fileNameDownloadUrlList;
         },
         downloadDocument: function (downloadUrl, fileName) {
-            debugger;
-            const settings = {
-                "xhrFields": {
-                    "responseType": "blob"
-                },
-                "async": true,
-                "crossDomain": true,
-                "url": `${mdd.endpoints.baseUrl}${downloadUrl}`,
-                "method": "GET",
-                "headers": {
-                    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
-                    "Accept-Language": "en-US,en;q=0.9",
-                    "Upgrade-Insecure-Requests": "1"
-                },
-                success: function (response, textStatus, xhr) {
-                    debugger;
 
-                    const contentDispositionHeader = xhr.getResponseHeader('Content-Disposition');
-                    const match = contentDispositionHeader.match(/filename="(.+)"/);
-                    const fileName = match && match[1] ? match[1] : 'download.pdf';
-
-
-                    const blob = new Blob([response], { type: 'application/pdf' });
-                    const link = document.createElement('a');
-                    link.href = window.URL.createObjectURL(blob);
-                    link.download = fileName;
+            const xhr = new XMLHttpRequest();
+            xhr.withCredentials = true;
+            xhr.responseType = 'arraybuffer';
+            xhr.addEventListener("readystatechange", function () {
+                if (this.readyState === this.DONE) {
+                    var blob=new Blob([this.response], {type:"application/pdf"});
+                    var link=document.createElement('a');
+                    link.href=window.URL.createObjectURL(blob);
+                    link.download=fileName;
                     link.click();
-
-                },
-                error: function(jqXHR, textStatus, errorThrown){
-                    console.log(textStatus + ": " + jqXHR.status + " " + errorThrown);
                 }
-            };
-            debugger;
-            $.ajax(settings);
+            });
+
+            xhr.open("GET", `${mdd.endpoints.baseUrl}${downloadUrl}`);
+            xhr.setRequestHeader("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7");
+            xhr.setRequestHeader("Accept-Language", "en-US,en;q=0.9");
+            xhr.setRequestHeader("Upgrade-Insecure-Requests", "1");
+
+            xhr.send();
+
         },
 
 
