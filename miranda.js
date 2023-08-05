@@ -596,7 +596,7 @@ const mdd = {
                 const randStr = Math.random().toString(36).substring(7);
                 let srcFileName = dataRay[i]['srcfile_desc'];
                 if(srcFileName.includes('<div')){
-                    srcFileName = $(srcFileName)[0].innerText;
+                    srcFileName = $(srcFileName)[0].title;
                 }
                 const downloadUrl = $(dataRay[i]['actions']).find("a:contains('Download Document')").attr("href");
 
