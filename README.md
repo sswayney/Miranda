@@ -1,5 +1,5 @@
 # Miranda Document Downloader
-#### version: 0.0.1
+#### version: 1.0.0
 
 A utility used to download multiple documents from a site.
 
