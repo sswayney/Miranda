@@ -471,7 +471,7 @@ const mdd = {
                         .then(function(content) {
                             const now = new Date();
                             const dateStr = `${now.getFullYear()}-${now.getMonth() + 1}-${now.getDate()}-${now.getHours()}-${now.getMinutes()}-${now.getSeconds()}`;
-                            saveAs(content, `${zipFileName}_${dateStr}`);
+                            saveAs(content, `${zipFileName}_${dateStr}.zip`);
                         });
 
 
