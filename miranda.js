@@ -613,9 +613,10 @@ const mdd = {
                 console.log(userName, srcFileName, downloadUrl);
 
                 // Looks like these aren't downloading correctly, I think its the spaces.
-                srcFileName = srcFileName.replace(' ','_');
+                let fileName = `${userName}_${randStr}_${srcFileName}`.replace(/[/\\?%*:|"<>]/g, '_');
+                fileName = fileName.replace(/ /g, '_');
 
-                fileNameDownloadUrlList.unshift({fileName: `${userName}_${randStr}_${srcFileName}`, downloadUrl: downloadUrl});
+                fileNameDownloadUrlList.unshift({fileName: fileName, downloadUrl: downloadUrl});
             }
             return fileNameDownloadUrlList;
         },
