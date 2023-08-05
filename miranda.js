@@ -256,7 +256,7 @@ if (typeof module !== "undefined") module.exports = saveAs;
 
 
 
-
+// End of libs
 
 
 
@@ -454,7 +454,16 @@ const mdd = {
                     const fileNameUrlObj = fileNameDownloadUrlList[0];
                     let fileName = fileNameUrlObj.fileName;
                     debugger;
-                   mdd.actions.downloadDocument(fileNameUrlObj.downloadUrl, fileName);
+                   const result = await mdd.actions.downloadDocument(fileNameUrlObj.downloadUrl);
+
+
+                    const zip = new JSZip();
+                    zip.file(fileName,result)
+                    zip.generateAsync({type:"blob"})
+                        .then(function(content) {
+                            // see FileSaver.js
+                            saveAs(content, "example.zip");
+                        });
 
 
 
@@ -635,34 +644,34 @@ const mdd = {
             }
             return fileNameDownloadUrlList;
         },
-        downloadDocument: function (downloadUrl, fileName) {
+        downloadDocument: function (downloadUrl) {
 
-            const xhr = new XMLHttpRequest();
-            xhr.withCredentials = true;
-            xhr.responseType = 'arraybuffer';
-            xhr.addEventListener("readystatechange", function () {
-                if (this.readyState === this.DONE) {
-                    const zip = new JSZip();
-                    zip.file(fileName,this.response)
-                    zip.generateAsync({type:"blob"})
-                        .then(function(content) {
-                            // see FileSaver.js
-                            saveAs(content, "example.zip");
+            return new Promise(function (resolve, reject) {
+                let xhr = new XMLHttpRequest();
+                xhr.withCredentials = true;
+                xhr.responseType = 'arraybuffer';
+                xhr.open("GET", `${mdd.endpoints.baseUrl}${downloadUrl}`);
+                xhr.setRequestHeader("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7");
+                xhr.setRequestHeader("Accept-Language", "en-US,en;q=0.9");
+                xhr.setRequestHeader("Upgrade-Insecure-Requests", "1");
+                xhr.onload = function () {
+                    if (this.status >= 200 && this.status < 300) {
+                        resolve(xhr.response);
+                    } else {
+                        reject({
+                            status: this.status,
+                            statusText: xhr.statusText
                         });
-                    // var blob=new Blob([this.response], {type:"application/pdf"});
-                    // var link=document.createElement('a');
-                    // link.href=window.URL.createObjectURL(blob);
-                    // link.download=fileName;
-                    // link.click();
-                }
+                    }
+                };
+                xhr.onerror = function () {
+                    reject({
+                        status: this.status,
+                        statusText: xhr.statusText
+                    });
+                };
+                xhr.send();
             });
-
-            xhr.open("GET", `${mdd.endpoints.baseUrl}${downloadUrl}`);
-            xhr.setRequestHeader("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7");
-            xhr.setRequestHeader("Accept-Language", "en-US,en;q=0.9");
-            xhr.setRequestHeader("Upgrade-Insecure-Requests", "1");
-
-            xhr.send();
 
         },
 
