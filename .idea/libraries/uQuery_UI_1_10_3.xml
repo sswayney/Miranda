@@ -1,0 +1,11 @@
+<component name="libraryTable">
+  <library name="uQuery UI 1.10.3" type="javaScript">
+    <properties>
+      <option name="frameworkName" value="jQuery UI" />
+      <option name="frameworkVersion" value="1.10.3" />
+    </properties>
+    <CLASSES />
+    <JAVADOC />
+    <SOURCES />
+  </library>
+</component>
