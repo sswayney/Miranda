@@ -382,10 +382,6 @@ const mdd = {
                 console.log(`Append the modal to the body`);
                 document.body.appendChild(modal);
 
-
-
-
-
                 console.log(`Function to close the modal`);
                 function closeModal() {
                     modal.style.display = "none";
@@ -594,6 +590,7 @@ const mdd = {
             console.log(dataRay);
             for(let i = 0; dataRay.length > i; i++){
                 const userName = $(dataRay[i]['eename'])[0].innerText;
+                const randStr = Math.random().toString(36).substring(7);
                 let srcFileName = dataRay[i]['srcfile_desc'];
                 if(srcFileName.includes('<div')){
                     srcFileName = $(srcFileName)[0].innerText;
@@ -611,7 +608,7 @@ const mdd = {
                     console.error(`Could not get download url - is html`);
                 }
                 console.log(userName, srcFileName, downloadUrl);
-                fileNameDownloadUrlList.unshift({fileName: `${userName}-${srcFileName}`, downloadUrl: downloadUrl});
+                fileNameDownloadUrlList.unshift({fileName: `${userName}-${randStr}-${srcFileName}`, downloadUrl: downloadUrl});
             }
             return fileNameDownloadUrlList;
         },
