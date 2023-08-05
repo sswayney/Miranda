@@ -398,7 +398,10 @@ const mdd = {
 
                 console.log(`Function to handle form submission`);
                 submitBtn.addEventListener("click", async () => {
-                    const zipFileName = nameInput.value;
+                    let zipFileName = nameInput.value;
+                    if(zipFileName){
+                        zipFileName = zipFileName.replace(' ','_');
+                    }
 
                     console.log("zipFileName: ", name);
 
@@ -608,7 +611,11 @@ const mdd = {
                     console.error(`Could not get download url - is html`);
                 }
                 console.log(userName, srcFileName, downloadUrl);
-                fileNameDownloadUrlList.unshift({fileName: `${userName}-${randStr}-${srcFileName}`, downloadUrl: downloadUrl});
+
+                // Looks like these aren't downloading correctly, I think its the spaces.
+                srcFileName = srcFileName.replace(' ','_');
+
+                fileNameDownloadUrlList.unshift({fileName: `${userName}_${randStr}_${srcFileName}`, downloadUrl: downloadUrl});
             }
             return fileNameDownloadUrlList;
         },
