@@ -261,12 +261,12 @@ if (typeof module !== "undefined") module.exports = saveAs;
 
 
 const mdd = {
-    version: '0.0.1',
-    bookmarkver: '0.0.1',
+    version: '1.0.0',
+    bookmarkver: '1.0.0',
     siteName: 'paycomonline.net',
     pageName: 'Dashboard',
     fullUrl: `https://www.paycomonline.net/v4/cl/web.php/Doc/Dashboard`,
-    github: `https://github.com/sswayney/Miranda/tree/dev`,
+    github: `https://github.com/sswayney/Miranda`,
     pageBy: 25,
     endpoints: {
         baseUrl: 'https://www.paycomonline.net',

@@ -1,5 +1,5 @@
 javascript: (function() {
-    window.bookmarkver = '0.0.1';
+    window.bookmarkver = '1.0.0';
     const siteName = 'paycomonline.net';
     const pageName = 'Dashboard';
     const pageNameDisplay = 'Document Management Dashboard';
@@ -7,7 +7,7 @@ javascript: (function() {
     var isCorrectPage = document.location.href.includes(pageName);
     if (isCorrectSite && isCorrectPage) {
         console.log('Init Miranda Document Downloader...');
-        var cachBustUrl = 'https://raw.githubusercontent.com/sswayney/Miranda/dev/miranda.js?' + (new Date().getMilliseconds());
+        var cachBustUrl = 'https://raw.githubusercontent.com/sswayney/Miranda/main/miranda.js?' + (new Date().getMilliseconds());
         fetch(cachBustUrl).then(function(response) {
             return response.text();
         }).then(function(data) {
