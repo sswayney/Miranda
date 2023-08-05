@@ -1,6 +1,6 @@
 {
   "name": "miranda",
-  "version": "0.0.1",
+  "version": "1.0.0",
   "description": "Miranda Document Download",
   "main": "bookmarklet.js",
   "scripts": {
