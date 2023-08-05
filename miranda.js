@@ -451,14 +451,27 @@ const mdd = {
                         alert(`Total record count doesn't match filesToDownload length`);
                     }
 
-                    const fileNameUrlObj = fileNameDownloadUrlList[0];
-                    let fileName = fileNameUrlObj.fileName;
+
                     debugger;
-                   const result = await mdd.actions.downloadDocument(fileNameUrlObj.downloadUrl);
-
-
                     const zip = new JSZip();
-                    zip.file(fileName,result)
+
+                    console.log('Downloading each document and placing it in a zip file for download.');
+
+                    for(let i = 0; i < fileNameDownloadUrlList.length && i < 10; i++){
+                        console.log(`Downloading ${i + 1} of ${fileNameDownloadUrlList.length}`);
+                        let fileNameUrlObj = fileNameDownloadUrlList[i];
+                        let fileName = fileNameUrlObj.fileName;
+                        console.log(`Downloading ${fileNameUrlObj.fileName} from ${fileNameUrlObj.downloadUrl}`);
+
+                        const result = await mdd.actions.downloadDocument(fileNameUrlObj.downloadUrl);
+                        zip.file(fileName,result);
+                        console.log(`Finished`);
+                    }
+
+
+
+
+                    console.log(`Saving Zip File`);
                     zip.generateAsync({type:"blob"})
                         .then(function(content) {
                             // see FileSaver.js
