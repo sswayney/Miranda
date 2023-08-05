@@ -446,13 +446,11 @@ const mdd = {
                         alert(`Total record count doesn't match filesToDownload length`);
                     }
 
-
-                    debugger;
                     const zip = new JSZip();
 
                     console.log('Downloading each document and placing it in a zip file for download.');
 
-                    for(let i = 0; i < fileNameDownloadUrlList.length && i < 10; i++){
+                    for(let i = 0; i < fileNameDownloadUrlList.length; i++){
                         console.log(`Downloading ${i + 1} of ${fileNameDownloadUrlList.length}`);
                         let fileNameUrlObj = fileNameDownloadUrlList[i];
                         let fileName = fileNameUrlObj.fileName;
@@ -463,19 +461,14 @@ const mdd = {
                         console.log(`Finished`);
                     }
 
-
-
-
                     console.log(`Saving Zip File`);
                     zip.generateAsync({type:"blob"})
                         .then(function(content) {
                             const now = new Date();
                             const dateStr = `${now.getFullYear()}-${now.getMonth() + 1}-${now.getDate()}-${now.getHours()}-${now.getMinutes()}-${now.getSeconds()}`;
                             saveAs(content, `${zipFileName}_${dateStr}.zip`);
+                            closeModal();
                         });
-
-
-
 
                 });
             }

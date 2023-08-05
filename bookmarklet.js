@@ -6,7 +6,6 @@ javascript: (function() {
     var isCorrectSite = document.location.hostname.split('.').slice(-2).join('.') === siteName;
     var isCorrectPage = document.location.href.includes(pageName);
     if (isCorrectSite && isCorrectPage) {
-        alert('Init Miranda Document Downloader.');
         console.log('Init Miranda Document Downloader...');
         var cachBustUrl = 'https://raw.githubusercontent.com/sswayney/Miranda/dev/miranda.js?' + (new Date().getMilliseconds());
         fetch(cachBustUrl).then(function(response) {
