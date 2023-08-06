@@ -445,7 +445,7 @@ const mdd = {
 
                     console.log('Downloading each document and placing it in a zip file for download.');
 
-                    for(let i = 0; i < fileNameDownloadUrlList.length && i < 25; i++){
+                    for(let i = 0; i < fileNameDownloadUrlList.length; i++){
                         console.log(`Downloading ${i + 1} of ${fileNameDownloadUrlList.length}`);
                         let fileNameUrlObj = fileNameDownloadUrlList[i];
                         let fileName = fileNameUrlObj.fileName;
