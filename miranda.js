@@ -445,13 +445,13 @@ const mdd = {
 
                     console.log('Downloading each document and placing it in a zip file for download.');
 
-                    for(let i = 0; i < fileNameDownloadUrlList.length; i++){
+                    for(let i = 0; i < fileNameDownloadUrlList.length && i < 25; i++){
                         console.log(`Downloading ${i + 1} of ${fileNameDownloadUrlList.length}`);
                         let fileNameUrlObj = fileNameDownloadUrlList[i];
                         let fileName = fileNameUrlObj.fileName;
                         console.log(`Downloading ${fileNameUrlObj.fileName} from ${fileNameUrlObj.downloadUrl}`);
 
-                        const result = await mdd.actions.downloadDocument(fileNameUrlObj.downloadUrl);
+                        const result = mdd.actions.downloadDocument(fileNameUrlObj.downloadUrl);
                         zip.file(fileName,result);
                         console.log(`Finished`);
                     }
