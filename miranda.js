@@ -263,7 +263,7 @@ const mdd = {
     pageName: 'Dashboard',
     fullUrl: `https://www.paycomonline.net/v4/cl/web.php/Doc/Dashboard`,
     github: `https://github.com/sswayney/Miranda`,
-    pageBy: 25,
+    pageBy: 500,
     endpoints: {
         baseUrl: 'https://www.paycomonline.net',
         dashboard: '/v4/cl/web.php/Doc/Dashboard'
@@ -399,71 +399,94 @@ const mdd = {
                 console.log(`Function to handle form submission`);
                 submitBtn.addEventListener("click", async () => {
                     let zipFileName = nameInput.value;
+                    const clientCode = window.ssoSessionInfo.clientCode;
+                    const localStorageKey = clientCode + '_mdd';
                     if(zipFileName){
                         zipFileName = zipFileName.replace(' ','_');
                     }
 
                     console.log("zipFileName: ", name);
+                    console.log("clientCode: ", clientCode);
 
-                    const fileNameDownloadUrlList = [];
-                    let currentStart = 0;
-                    let currentRecordCount = 0;
-                    let response = await mdd.actions.getDocumentList(currentStart, mdd.pageBy).promise();
-                    console.log(response);
-                    const recordsTotal = +response['recordsTotal'];
+                    let fileNameDownloadUrlList = [];
 
-                    if(recordsTotal < 1){
-                        alert('Zero documents found');
-                        return;
-                    }
+                    if(!localStorage.getItem(localStorageKey)){
+                        let currentStart = 0;
+                        let currentRecordCount = 0;
+                        let response = await mdd.actions.getDocumentList(currentStart, mdd.pageBy).promise();
+                        console.log(response);
+                        const recordsTotal = +response['recordsTotal'];
 
-                    console.info(`Got document list
+                        if(recordsTotal < 1){
+                            alert('Zero documents found');
+                            return;
+                        }
+
+                        console.info(`Got document list
                         recordsTotal: ${recordsTotal},
                         currentRecordCount: ${currentRecordCount},
                         currentStart: ${currentStart}`);
-                    fileNameDownloadUrlList.unshift(...mdd.actions.getFileNameUrlList(response));
-                    currentRecordCount += response.data.length;
-
-                    while (recordsTotal > 0 && currentRecordCount < recordsTotal) {
-                        currentStart += mdd.pageBy;
-                        console.info(`Getting next page
-                        recordsTotal: ${recordsTotal},
-                        currentRecordCount: ${currentRecordCount},
-                        currentStart: ${currentStart}`);
-                        response = await mdd.actions.getDocumentList(currentStart,mdd.pageBy).promise();
                         fileNameDownloadUrlList.unshift(...mdd.actions.getFileNameUrlList(response));
                         currentRecordCount += response.data.length;
+
+                        while (recordsTotal > 0 && currentRecordCount < recordsTotal) {
+                            currentStart += mdd.pageBy;
+                            console.info(`Getting next page
+                        recordsTotal: ${recordsTotal},
+                        currentRecordCount: ${currentRecordCount},
+                        currentStart: ${currentStart}`);
+                            response = await mdd.actions.getDocumentList(currentStart,mdd.pageBy).promise();
+                            fileNameDownloadUrlList.unshift(...mdd.actions.getFileNameUrlList(response));
+                            currentRecordCount += response.data.length;
+                        }
+
+                        console.info(`All document file data needed to download attained.`);
+                        console.log(fileNameDownloadUrlList);
+                        if(fileNameDownloadUrlList.length !== recordsTotal){
+                            alert(`Total record count doesn't match filesToDownload length`);
+                        }
+
+                        localStorage.setItem(localStorageKey, JSON.stringify(fileNameDownloadUrlList));
+                    } else {
+                        fileNameDownloadUrlList = JSON.parse(localStorage.getItem(localStorageKey));
+                        console.info(`Document list found in local storage`, fileNameDownloadUrlList);
                     }
 
-                    console.info(`All document file data needed to download attained.`);
-                    console.log(fileNameDownloadUrlList);
-                    if(fileNameDownloadUrlList.length !== recordsTotal){
-                        alert(`Total record count doesn't match filesToDownload length`);
+                    const maxZipFileCount = 10;
+                    const allFileCount = fileNameDownloadUrlList.length;
+                    const zipFileCountNeeded = Math.ceil(allFileCount / maxZipFileCount);
+
+                    for(let zipFileNum = 0; zipFileNum < zipFileCountNeeded; zipFileNum++ ){
+
+                        const zip = new JSZip();
+                        console.log('Downloading each document and placing it in a zip file for download.');
+                        const startIndex = zipFileNum * maxZipFileCount;
+                        const endIndex = startIndex + maxZipFileCount;
+                        for(let i = startIndex; i < allFileCount && i < endIndex; i++){
+                            console.log(`Downloading ${i + 1} of ${allFileCount}`);
+                            let fileNameUrlObj = fileNameDownloadUrlList[i];
+                            let fileName = fileNameUrlObj.fileName;
+                            console.log(`Downloading ${fileNameUrlObj.fileName} from ${fileNameUrlObj.downloadUrl}`);
+
+                            const result = mdd.actions.downloadDocument(fileNameUrlObj.downloadUrl);
+                            zip.file(fileName,result);
+                            console.log(`Finished`);
+                        }
+
+                        console.log(`Saving Zip File`);
+                        zip.generateAsync({type:"blob"})
+                            .then(function(content) {
+                                const now = new Date();
+                                const dateStr = `${now.getFullYear()}-${now.getMonth() + 1}-${now.getDate()}-${now.getHours()}-${now.getMinutes()}-${now.getSeconds()}`;
+                                saveAs(content, `${zipFileName}_${dateStr}.zip`);
+                                console.log(`Finished save zip`);
+
+                            });
+
+
                     }
 
-                    const zip = new JSZip();
 
-                    console.log('Downloading each document and placing it in a zip file for download.');
-
-                    for(let i = 0; i < fileNameDownloadUrlList.length; i++){
-                        console.log(`Downloading ${i + 1} of ${fileNameDownloadUrlList.length}`);
-                        let fileNameUrlObj = fileNameDownloadUrlList[i];
-                        let fileName = fileNameUrlObj.fileName;
-                        console.log(`Downloading ${fileNameUrlObj.fileName} from ${fileNameUrlObj.downloadUrl}`);
-
-                        const result = mdd.actions.downloadDocument(fileNameUrlObj.downloadUrl);
-                        zip.file(fileName,result);
-                        console.log(`Finished`);
-                    }
-
-                    console.log(`Saving Zip File`);
-                    zip.generateAsync({type:"blob"})
-                        .then(function(content) {
-                            const now = new Date();
-                            const dateStr = `${now.getFullYear()}-${now.getMonth() + 1}-${now.getDate()}-${now.getHours()}-${now.getMinutes()}-${now.getSeconds()}`;
-                            saveAs(content, `${zipFileName}_${dateStr}.zip`);
-                            closeModal();
-                        });
 
                 });
             }
