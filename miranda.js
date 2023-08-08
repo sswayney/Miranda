@@ -404,6 +404,8 @@ const mdd = {
                     if(zipFileName){
                         zipFileName = zipFileName.replace(' ','_');
                     }
+                    const now = new Date();
+                    const dateStr = `${now.getFullYear()}-${now.getMonth() + 1}-${now.getDate()}-${now.getHours()}-${now.getMinutes()}-${now.getSeconds()}`;
 
                     console.log("zipFileName: ", name);
                     console.log("clientCode: ", clientCode);
@@ -466,7 +468,7 @@ const mdd = {
 
 
 
-                    const maxZipFileCount = 10;
+                    const maxZipFileCount = 1000;
                     const allFileCount = fileNameDownloadUrlList.length;
                     const zipFileCountNeeded = Math.ceil(allFileCount / maxZipFileCount);
 
@@ -488,14 +490,9 @@ const mdd = {
                         }
 
                         console.log(`Saving Zip File`);
-                        zip.generateAsync({type:"blob"})
-                            .then(function(content) {
-                                const now = new Date();
-                                const dateStr = `${now.getFullYear()}-${now.getMonth() + 1}-${now.getDate()}-${now.getHours()}-${now.getMinutes()}-${now.getSeconds()}`;
-                                saveAs(content, `${zipFileName}_${dateStr}.zip`);
-                                console.log(`Finished save zip`);
-
-                            });
+                        const zipFile = await zip.generateAsync({type:"blob"});
+                        saveAs(zipFile, `${zipFileName}_${dateStr}_${zipFileNum + 1}.zip`);
+                        console.log(`Finished save zip ${zipFileNum + 1}`);
 
 
                     }
