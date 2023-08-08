@@ -400,7 +400,8 @@ const mdd = {
                 submitBtn.addEventListener("click", async () => {
                     let zipFileName = nameInput.value;
                     const clientCode = window.ssoSessionInfo.clientCode;
-                    const localStorageKey = clientCode + '_mdd';
+                    const docListKey = clientCode + '_mdd';
+                    const lastZipFileNumKey = clientCode + '_mdd_last_zip_num';
                     if(zipFileName){
                         zipFileName = zipFileName.replace(' ','_');
                     }
@@ -412,7 +413,7 @@ const mdd = {
 
                     let fileNameDownloadUrlList = [];
 
-                    if(!localStorage.getItem(localStorageKey)){
+                    if(!localStorage.getItem(docListKey)){
                         let currentStart = 0;
                         let currentRecordCount = 0;
                         let response = await mdd.actions.getDocumentList(currentStart, mdd.pageBy).promise();
@@ -460,19 +461,25 @@ const mdd = {
                             }
                         }
 
-                        localStorage.setItem(localStorageKey, JSON.stringify(fileNameDownloadUrlList));
+                        localStorage.setItem(docListKey, JSON.stringify(fileNameDownloadUrlList));
                     } else {
-                        fileNameDownloadUrlList = JSON.parse(localStorage.getItem(localStorageKey));
+                        fileNameDownloadUrlList = JSON.parse(localStorage.getItem(docListKey));
                         console.info(`Document list found in local storage`, fileNameDownloadUrlList);
                     }
 
-
-
-                    const maxZipFileCount = 1000;
+                    const maxZipFileCount = 250;
                     const allFileCount = fileNameDownloadUrlList.length;
                     const zipFileCountNeeded = Math.ceil(allFileCount / maxZipFileCount);
 
-                    for(let zipFileNum = 0; zipFileNum < zipFileCountNeeded; zipFileNum++ ){
+                    let zipFileNum = 0
+                    if(localStorage.getItem(lastZipFileNumKey)) {
+                        const num = +localStorage.getItem(lastZipFileNumKey);
+                        if(confirm(`The last zip file downloaded was ${num}, should we start from ${num + 1}`)){
+                            zipFileNum = num + 1;
+                        }
+                    }
+
+                    for(; zipFileNum < zipFileCountNeeded; zipFileNum++ ){
 
                         const zip = new JSZip();
                         console.log('Downloading each document and placing it in a zip file for download.');
@@ -493,10 +500,13 @@ const mdd = {
                         const zipFile = await zip.generateAsync({type:"blob"});
                         saveAs(zipFile, `${zipFileName}_${dateStr}_${zipFileNum + 1}.zip`);
                         console.log(`Finished save zip ${zipFileNum + 1}`);
-
-
+                        localStorage.setItem(lastZipFileNumKey, '' + zipFileNum);
                     }
-
+                    console.log(`Finished all`);
+                    if(confirm(`Finished! Can I clean up local storage?`)){
+                        localStorage.removeItem(docListKey);
+                        localStorage.removeItem(lastZipFileNumKey);
+                    }
 
 
                 });
