@@ -451,7 +451,7 @@ const mdd = {
                         let fileName = fileNameUrlObj.fileName;
                         console.log(`Downloading ${fileNameUrlObj.fileName} from ${fileNameUrlObj.downloadUrl}`);
 
-                        const result = await mdd.actions.downloadDocument(fileNameUrlObj.downloadUrl);
+                        const result = mdd.actions.downloadDocument(fileNameUrlObj.downloadUrl);
                         zip.file(fileName,result);
                         console.log(`Finished`);
                     }
