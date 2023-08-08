@@ -440,10 +440,22 @@ const mdd = {
                             currentRecordCount += response.data.length;
                         }
 
+
+
                         console.info(`All document file data needed to download attained.`);
                         console.log(fileNameDownloadUrlList);
                         if(fileNameDownloadUrlList.length !== recordsTotal){
                             alert(`Total record count doesn't match filesToDownload length`);
+                        }
+
+                        const hasNoDownload = fileNameDownloadUrlList.filter(d => !d.downloadUrl);
+                        if(hasNoDownload.length > 0){
+                            console.log(`has no download`, hasNoDownload);
+                            alert(`${hasNoDownload.length} documents have no download, review in console`);
+                            fileNameDownloadUrlList = fileNameDownloadUrlList.filter(d => d.downloadUrl);
+                            if(!confirm(`Do you want to continue?`)){
+                                return;
+                            }
                         }
 
                         localStorage.setItem(localStorageKey, JSON.stringify(fileNameDownloadUrlList));
@@ -451,6 +463,8 @@ const mdd = {
                         fileNameDownloadUrlList = JSON.parse(localStorage.getItem(localStorageKey));
                         console.info(`Document list found in local storage`, fileNameDownloadUrlList);
                     }
+
+
 
                     const maxZipFileCount = 10;
                     const allFileCount = fileNameDownloadUrlList.length;
