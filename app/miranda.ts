@@ -1,12 +1,20 @@
 import {MddUtils} from "./utils";
-import {AjaxRequestSettings, FileMetaData} from "./types";
+import {AjaxRequestSettings, DownloadResult, FileMetaData} from "./types";
 import {Settings} from "./settings";
 import * as JSZip from "jszip";
-import * as StreamSaver from "streamsaver"
+import  {createWriteStream} from "streamsaver"
 import {LocalStorageMdd} from "./local-storage";
 
 
+export interface DownloadDocumentResult {
+    response: Promise<ArrayBuffer>;
+    xhr: XMLHttpRequest;
+}
 
+export interface TempType {
+    ddr: DownloadDocumentResult;
+    finished: Promise<void>;
+}
 
 export class Miranda {
 
@@ -111,26 +119,37 @@ export class Miranda {
             return;
         }
 
-        if (fileNameDownloadUrlList.some(fds => !fds.isDownloaded)) {
-
-            const zip = new JSZip();
-            console.log('Downloading each document and placing it in a zip file for download.');
-
-
-            let fileNameUrlObj = fileNameDownloadUrlList[0];
-            let fileName = fileNameUrlObj.fileName;
-
-            const result = this.downloadDocument(fileNameUrlObj.downloadUrl) as unknown as Promise<JSZip.InputType>;
-
-
-            // tsc-ignore
-            zip.file(fileName, result);
-            console.log(`Finished`);
-
-            console.log(`Saving Zip File`);
-            const zipFile = await zip.generateAsync({type: "blob"});
-            saveAs(zipFile, `${zipFileName}_${dateStr}.zip`);
+        while (fileNameDownloadUrlList.some(fds => !fds.isDownloaded)) {
+            console.info(`Starting download....`);
+            const unDownloadedFiles = fileNameDownloadUrlList.filter(f => !f.isDownloaded);
+            let downloadedUrls = await this.downloadData(unDownloadedFiles);
+            console.info(`Downloaded files`, downloadedUrls);
+            fileNameDownloadUrlList = fileNameDownloadUrlList.map(f => {
+                if(downloadedUrls.some(url => url === f.downloadUrl)){
+                    f.isDownloaded = true;
+                }
+                return f;
+            });
+            LocalStorageMdd.setFileMetaDataInLocalStorage(fileNameDownloadUrlList);
         }
+
+        // const zip = new JSZip();
+        // console.log('Downloading each document and placing it in a zip file for download.');
+        //
+        //
+        // let fileNameUrlObj = fileNameDownloadUrlList[0];
+        // let fileName = fileNameUrlObj.fileName;
+        //
+        // const result = this.downloadDocument(fileNameUrlObj.downloadUrl);
+        //
+        //
+        // // tsc-ignore
+        // zip.file(fileName, result.response);
+        // console.log(`Finished`);
+        //
+        // console.log(`Saving Zip File`);
+        // const zipFile = await zip.generateAsync({type: "blob"});
+        // saveAs(zipFile, `${zipFileName}_${dateStr}.zip`);
 
 
         console.log(`Finished all`);
@@ -356,33 +375,109 @@ export class Miranda {
      * Downloads one document
      * @param downloadUrl
      */
-    private downloadDocument = (downloadUrl) => {
-        return new Promise(function (resolve, reject) {
-            let xhr = new XMLHttpRequest();
-            xhr.withCredentials = true;
-            xhr.responseType = 'arraybuffer';
-            xhr.open("GET", `${Settings.endpoints.baseUrl}${downloadUrl}`);
-            xhr.setRequestHeader("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7");
-            xhr.setRequestHeader("Accept-Language", "en-US,en;q=0.9");
-            xhr.setRequestHeader("Upgrade-Insecure-Requests", "1");
-            xhr.onload = function () {
-                if (this.status >= 200 && this.status < 300) {
-                    resolve(xhr.response);
-                } else {
+    private downloadDocument = (downloadUrl: string): DownloadDocumentResult => {
+        const xhr = new XMLHttpRequest();
+        return {
+            response: new Promise(function (resolve, reject) {
+
+                // Attach the abort signal to the XHR instance
+                xhr.withCredentials = true;
+                xhr.responseType = 'arraybuffer';
+                xhr.open("GET", `${Settings.endpoints.baseUrl}${downloadUrl}`);
+                xhr.setRequestHeader("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7");
+                xhr.setRequestHeader("Accept-Language", "en-US,en;q=0.9");
+                xhr.setRequestHeader("Upgrade-Insecure-Requests", "1");
+                xhr.onload = function () {
+                    if (this.status >= 200 && this.status < 300) {
+                        resolve(xhr.response);
+                    } else {
+                        reject({
+                            status: this.status,
+                            statusText: xhr.statusText
+                        });
+                    }
+                };
+                xhr.onerror = function () {
                     reject({
                         status: this.status,
                         statusText: xhr.statusText
                     });
-                }
-            };
-            xhr.onerror = function () {
-                reject({
-                    status: this.status,
-                    statusText: xhr.statusText
+                };
+                xhr.send();
+            }),
+            xhr
+        };
+    }
+
+
+    /**
+     * Downloads the list and returns the urls to the files it was able to download
+     * It will stop downloaded once the file is 2 gigs. So you will need to handle
+     * the remaining files.
+     * @param fileMetaDataList
+     */
+    private downloadData = async (fileMetaDataList: FileMetaData[]): Promise<string[]> => {
+        const maxConcurrentRequests = 6;
+        const maxDataSize = 1 * 1024 * 1024 * 1024; // 1 gigabytes in bytes
+        let totalDownloaded = 0;
+        const downloadedData: DownloadResult[] = [];
+
+        const downloadPromises: TempType[] = [];
+
+        for (const fileMetaData of fileMetaDataList) {
+            if (totalDownloaded >= maxDataSize) {
+                break;
+            }
+
+            if (downloadPromises.length >= maxConcurrentRequests) {
+                const finishedPromise = Promise.race(downloadPromises.map(x => x.finished));
+                downloadPromises.splice(downloadPromises.map(x => x.finished).indexOf(finishedPromise), 1);
+            }
+
+
+            const downloadPromise = this.downloadDocument(fileMetaData.downloadUrl);
+            const promise = downloadPromise.response
+                .then((data) => {
+                    totalDownloaded += data.byteLength;
+                    console.log(`totalDownloaded data ${totalDownloaded}`);
+                    // Todo: not sure about the data type here.
+                    downloadedData.push(<DownloadResult>{url: fileMetaData.downloadUrl, data});
+
+                    if (totalDownloaded >= maxDataSize) {
+                        console.log(`Reached max size. Starting to cancel what ever is left.`);
+                        for (const remainingPromise of downloadPromises) {
+                            console.log(`Canceling...`);
+                            // Assuming a way to cancel requests
+                            remainingPromise.ddr.xhr.abort();
+                        }
+                    }
+                })
+                .catch((error) => {
+                    console.error(`Error fetching ${fileMetaData.downloadUrl}:`, error);
                 });
-            };
-            xhr.send();
+
+            downloadPromises.push({ddr: downloadPromise, finished: promise});
+        }
+
+        await Promise.all(downloadPromises);
+
+        console.log(`Preparing to zip ${downloadedData.length} files`);
+
+        // Create a zip file using jszip
+        const zip = new JSZip();
+        downloadedData.forEach(({ url, data }) => {
+            zip.file(url, data);
         });
+
+        // StreamSaver.js to save the zip file
+        const fileStream = createWriteStream(`downloaded_data.zip`);
+        const writer = fileStream.getWriter();
+        const blob = await zip.generateAsync({ type: 'blob' });
+
+        await writer.write(blob);
+        await writer.close();
+
+        return downloadedData.map(d => d.url);
     }
 
 }
