@@ -26,6 +26,7 @@
     "@types/file-saver": "^2.0.5",
     "@types/jquery": "1.10.39",
     "@types/node": "^20.4.10",
+    "@types/streamsaver": "^2.0.1",
     "jquery": "1.11.1",
     "jquery-ui": "1.13.2",
     "ts-loader": "^9.4.4",

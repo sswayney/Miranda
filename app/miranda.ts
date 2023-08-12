@@ -2,7 +2,10 @@ import {MddUtils} from "./utils";
 import {AjaxRequestSettings, FileMetaData} from "./types";
 import {Settings} from "./settings";
 import * as JSZip from "jszip";
-import * as saveAs from "file-saver";
+import * as StreamSaver from "streamsaver"
+import {LocalStorageMdd} from "./local-storage";
+
+
 
 
 export class Miranda {
@@ -76,33 +79,94 @@ export class Miranda {
 
         console.log(`Function to handle form submission`);
         submitBtn.addEventListener("click", async () => {
-            let zipFileName = nameInput.value;
-            const clientCode = window['ssoSessionInfo']['clientCode'];
-            const docListKey = clientCode + '_mdd';
-            const lastZipFileNumKey = clientCode + '_mdd_last_zip_num';
-            if (zipFileName) {
-                zipFileName = zipFileName.replace(' ', '_');
+            await this.downLoadAll(nameInput);
+        });
+    }
+
+
+    private async downLoadAll(nameInput: HTMLInputElement): Promise<void> {
+        console.log(`downLoadAll`);
+        let zipFileName = nameInput.value;
+        const dateStr = MddUtils.generateDateString();
+        const docListKey = Settings.localStorageKeys.fileMetaData;
+        if (zipFileName) {
+            zipFileName = zipFileName.replace(' ', '_');
+        }
+
+        console.log("zipFileName: ", zipFileName);
+        console.log("clientCode: ", Settings.clientCode);
+
+        // Get the filenames, download url and isDownload status either fresh from server or localstorage
+        let fileNameDownloadUrlList: FileMetaData[] = [];
+        try {
+            fileNameDownloadUrlList = await this.getAllFileMetaData();
+        } catch (e){
+            // check if its one of our errors as they are predicted
+            if(Object.keys(Settings.errorMessages).map(k => Settings.errorMessages[k]).some(m => m == e.message)){
+                console.warn(e.message);
+            } else {
+                console.error(e);
+                alert(`Error while getting file metadata list ${e.message}`);
             }
-            const now = new Date();
-            const dateStr = `${now.getFullYear()}-${now.getMonth() + 1}-${now.getDate()}-${now.getHours()}-${now.getMinutes()}-${now.getSeconds()}`;
+            return;
+        }
 
-            console.log("zipFileName: ", name);
-            console.log("clientCode: ", clientCode);
+        if (fileNameDownloadUrlList.some(fds => !fds.isDownloaded)) {
 
-            let fileNameDownloadUrlList: FileMetaData[] = [];
+            const zip = new JSZip();
+            console.log('Downloading each document and placing it in a zip file for download.');
 
-            if (!localStorage.getItem(docListKey)) {
-                let currentStart = 0;
-                let currentRecordCount = 0;
-                // Not sure what the response type is
-                let response = await this.getDocumentList(currentStart, Settings.pageBy).promise();
-                console.log(response);
-                const recordsTotal = +response['recordsTotal'];
 
-                if (recordsTotal < 1) {
-                    alert('Zero documents found');
-                    return;
-                }
+            let fileNameUrlObj = fileNameDownloadUrlList[0];
+            let fileName = fileNameUrlObj.fileName;
+
+            const result = this.downloadDocument(fileNameUrlObj.downloadUrl) as unknown as Promise<JSZip.InputType>;
+
+
+            // tsc-ignore
+            zip.file(fileName, result);
+            console.log(`Finished`);
+
+            console.log(`Saving Zip File`);
+            const zipFile = await zip.generateAsync({type: "blob"});
+            saveAs(zipFile, `${zipFileName}_${dateStr}.zip`);
+        }
+
+
+        console.log(`Finished all`);
+        if (confirm(`Finished! Can I clean up local storage?`)) {
+            LocalStorageMdd.clearAll();
+        }
+    }
+
+
+    /**
+     * Gets all file metadata either fresh from server of from local storage.
+     * Contains confirm prompts
+     * @throws {Error}
+     * @private
+     */
+    private async getAllFileMetaData(): Promise<FileMetaData[]> | never {
+        let fileNameDownloadUrlList: FileMetaData[] = [];
+
+        if (LocalStorageMdd.getFileMetaDataFromLocalStorage()) {
+            if (!confirm(`Saved downloaded file progress found in local storage. Do you want to continue were you left off?`)) {
+                LocalStorageMdd.clearAll();
+            }
+        }
+
+        if (!LocalStorageMdd.getFileMetaDataFromLocalStorage()) {
+            let currentStart = 0;
+            let currentRecordCount = 0;
+            // Not sure what the response type is
+            let response = await this.getDocumentList(currentStart, Settings.pageBy).promise();
+            console.log(response);
+            const recordsTotal = +response['recordsTotal'];
+
+            if (recordsTotal < 1) {
+                alert(Settings.errorMessages.NoFilesFound);
+                throw new Error(Settings.errorMessages.NoFilesFound);
+            } else {
 
                 console.info(`Got document list
                         recordsTotal: ${recordsTotal},
@@ -134,49 +198,19 @@ export class Miranda {
                     alert(`${hasNoDownload.length} documents have no download, review in console`);
                     fileNameDownloadUrlList = fileNameDownloadUrlList.filter(d => d.downloadUrl);
                     if (!confirm(`Do you want to continue?`)) {
-                        return;
+                        throw new Error(Settings.errorMessages.NoDownloadableFiles);
                     }
                 }
-
-                localStorage.setItem(docListKey, JSON.stringify(fileNameDownloadUrlList));
-            } else {
-                fileNameDownloadUrlList = JSON.parse(localStorage.getItem(docListKey));
-                console.info(`Document list found in local storage`, fileNameDownloadUrlList);
+                LocalStorageMdd.setFileMetaDataInLocalStorage(fileNameDownloadUrlList);
             }
 
 
-            if (fileNameDownloadUrlList.some(fds => !fds.isDownloaded)) {
-
-                const zip = new JSZip();
-                console.log('Downloading each document and placing it in a zip file for download.');
-
-
-                let fileNameUrlObj = fileNameDownloadUrlList[0];
-                let fileName = fileNameUrlObj.fileName;
-
-                const result = this.downloadDocument(fileNameUrlObj.downloadUrl) as unknown as Promise<JSZip.InputType>;
-
-
-                // tsc-ignore
-                zip.file(fileName, result);
-                console.log(`Finished`);
-
-                console.log(`Saving Zip File`);
-                const zipFile = await zip.generateAsync({type: "blob"});
-                saveAs(zipFile, `${zipFileName}_${dateStr}.zip`);
-            }
-
-
-            console.log(`Finished all`);
-            if (confirm(`Finished! Can I clean up local storage?`)) {
-                localStorage.removeItem(docListKey);
-                localStorage.removeItem(lastZipFileNumKey);
-            }
-
-
-        });
+        } else {
+            fileNameDownloadUrlList = LocalStorageMdd.getFileMetaDataFromLocalStorage();
+            console.info(`Document list found in local storage`, fileNameDownloadUrlList);
+        }
+        return fileNameDownloadUrlList;
     }
-
 
     private getDocumentList = (start: number | string, length: number | string) => {
         console.info('getDocumentList');
