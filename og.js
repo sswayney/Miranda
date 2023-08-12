@@ -326,14 +326,6 @@ const mdd = {
 
             document.title = 'Miranda Document Download';
             $(window).on("error", mdd.error);
-            mdd.setup.applyStyles();
-            mdd.setup.applyCentral();
-        },
-        applyStyles: function () {
-
-        },
-        applyCentral: function () {
-
         },
         openModal: function () {
                 console.log(`Create the modal div and its content`);
@@ -443,8 +435,6 @@ const mdd = {
                             currentRecordCount += response.data.length;
                         }
 
-
-
                         console.info(`All document file data needed to download attained.`);
                         console.log(fileNameDownloadUrlList);
                         if(fileNameDownloadUrlList.length !== recordsTotal){
@@ -467,41 +457,32 @@ const mdd = {
                         console.info(`Document list found in local storage`, fileNameDownloadUrlList);
                     }
 
-                    const maxZipFileCount = 250;
-                    const allFileCount = fileNameDownloadUrlList.length;
-                    const zipFileCountNeeded = Math.ceil(allFileCount / maxZipFileCount);
 
-                    let zipFileNum = 0
-                    if(localStorage.getItem(lastZipFileNumKey)) {
-                        const num = +localStorage.getItem(lastZipFileNumKey);
-                        if(confirm(`The last zip file downloaded was ${num}, should we start from ${num + 1}`)){
-                            zipFileNum = num + 1;
-                        }
-                    }
 
-                    for(; zipFileNum < zipFileCountNeeded; zipFileNum++ ){
+                    if(fileNameDownloadUrlList.some(fds => !fds.isDownloaded)){
 
                         const zip = new JSZip();
                         console.log('Downloading each document and placing it in a zip file for download.');
-                        const startIndex = zipFileNum * maxZipFileCount;
-                        const endIndex = startIndex + maxZipFileCount;
-                        for(let i = startIndex; i < allFileCount && i < endIndex; i++){
-                            console.log(`Downloading ${i + 1} of ${allFileCount}`);
-                            let fileNameUrlObj = fileNameDownloadUrlList[i];
-                            let fileName = fileNameUrlObj.fileName;
-                            console.log(`Downloading ${fileNameUrlObj.fileName} from ${fileNameUrlObj.downloadUrl}`);
 
-                            const result = mdd.actions.downloadDocument(fileNameUrlObj.downloadUrl);
-                            zip.file(fileName,result);
-                            console.log(`Finished`);
-                        }
+
+                        let fileNameUrlObj = fileNameDownloadUrlList[0];
+                        let fileName = fileNameUrlObj.fileName;
+
+                        const result = mdd.actions.downloadDocument(fileNameUrlObj.downloadUrl);
+
+
+
+                        zip.file(fileName,result);
+                        console.log(`Finished`);
 
                         console.log(`Saving Zip File`);
                         const zipFile = await zip.generateAsync({type:"blob"});
-                        saveAs(zipFile, `${zipFileName}_${dateStr}_${zipFileNum + 1}.zip`);
-                        console.log(`Finished save zip ${zipFileNum + 1}`);
-                        localStorage.setItem(lastZipFileNumKey, '' + zipFileNum);
+                        saveAs(zipFile, `${zipFileName}_${dateStr}.zip`);
+
                     }
+
+
+
                     console.log(`Finished all`);
                     if(confirm(`Finished! Can I clean up local storage?`)){
                         localStorage.removeItem(docListKey);
@@ -657,7 +638,7 @@ const mdd = {
                 let fileName = `${userName}_${randStr}_${srcFileName}`.replace(/[/\\?%*:|"<>]/g, '_');
                 fileName = fileName.replace(/ /g, '_');
 
-                fileNameDownloadUrlList.unshift({fileName: fileName, downloadUrl: downloadUrl});
+                fileNameDownloadUrlList.unshift({fileName: fileName, downloadUrl: downloadUrl, isDownloaded: false});
             }
             return fileNameDownloadUrlList;
         },
@@ -689,7 +670,6 @@ const mdd = {
                 };
                 xhr.send();
             });
-
         }
     },
     ui: {

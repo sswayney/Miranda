@@ -4,7 +4,8 @@
   "description": "Miranda Document Download",
   "main": "bookmarklet.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "build": "tsc --build",
+    "clean": "tsc --build --clean"
   },
   "repository": {
     "type": "git",
@@ -16,8 +17,19 @@
     "url": "https://github.com/sswayney/Miranda/issues"
   },
   "homepage": "https://github.com/sswayney/Miranda#readme",
+  "dependencies": {
+    "jszip": "^3.10.1",
+    "file-saver": "2.0.5",
+    "streamsaver": "^2.0.6"
+  },
   "devDependencies": {
+    "@types/jquery": "1.10.39",
+    "@types/node": "^20.4.10",
     "jquery": "1.11.1",
-    "jquery-ui": "1.13.2"
+    "jquery-ui": "1.13.2",
+    "ts-loader": "^9.4.4",
+    "typescript": "^5.1.6",
+    "webpack": "^5.88.2",
+    "webpack-cli": "^5.1.4"
   }
 }
