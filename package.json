@@ -18,11 +18,12 @@
   },
   "homepage": "https://github.com/sswayney/Miranda#readme",
   "dependencies": {
-    "jszip": "^3.10.1",
     "file-saver": "2.0.5",
+    "jszip": "^3.10.1",
     "streamsaver": "^2.0.6"
   },
   "devDependencies": {
+    "@types/file-saver": "^2.0.5",
     "@types/jquery": "1.10.39",
     "@types/node": "^20.4.10",
     "jquery": "1.11.1",

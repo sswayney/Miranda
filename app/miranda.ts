@@ -2,198 +2,180 @@ import {MddUtils} from "./utils";
 import {AjaxRequestSettings, FileMetaData} from "./types";
 import {Settings} from "./settings";
 import * as JSZip from "jszip";
+import * as saveAs from "file-saver";
 
 
 export class Miranda {
-    private test: string;
 
     constructor() {
+        console.info('Miranda Constructor Called. Opening Modal.');
+        this.openModal();
 
     }
-
-
-
-
-
-
-
-
     private openModal = () => {
-    console.log(`Create the modal div and its content`);
-    const modal = document.createElement("div");
-    modal.setAttribute("id", "myModal");
-    modal.style.display = "block";
-    modal.style.position = "fixed";
-    modal.style.zIndex = "1";
-    modal.style.left = "0";
-    modal.style.top = "0";
-    modal.style.width = "100%";
-    modal.style.height = "100%";
-    modal.style.backgroundColor = "rgba(0, 0, 0, 0.5)";
+        console.log(`Create the modal div and its content`);
+        const modal = document.createElement("div");
+        modal.setAttribute("id", "myModal");
+        modal.style.display = "block";
+        modal.style.position = "fixed";
+        modal.style.zIndex = "1";
+        modal.style.left = "0";
+        modal.style.top = "0";
+        modal.style.width = "100%";
+        modal.style.height = "100%";
+        modal.style.backgroundColor = "rgba(0, 0, 0, 0.5)";
 
-    const modalContent = document.createElement("div");
-    modalContent.setAttribute("class", "modal-content");
-    modalContent.style.position = "absolute";
-    modalContent.style.top = "50%";
-    modalContent.style.left = "50%";
-    modalContent.style.transform = "translate(-50%, -50%)";
-    modalContent.style.backgroundColor = "#fff";
-    modalContent.style.padding = "20px";
-    modalContent.style.borderRadius = "5px";
+        const modalContent = document.createElement("div");
+        modalContent.setAttribute("class", "modal-content");
+        modalContent.style.position = "absolute";
+        modalContent.style.top = "50%";
+        modalContent.style.left = "50%";
+        modalContent.style.transform = "translate(-50%, -50%)";
+        modalContent.style.backgroundColor = "#fff";
+        modalContent.style.padding = "20px";
+        modalContent.style.borderRadius = "5px";
 
-    console.log(`Create the form elements`);
-    const nameLabel = document.createElement("label");
-    nameLabel.setAttribute("for", "name");
-    nameLabel.innerText = "Zip File Name Prefix: ";
-    const nameInput = document.createElement("input");
-    nameInput.setAttribute("type", "text");
-    nameInput.setAttribute("id", "name");
+        console.log(`Create the form elements`);
+        const nameLabel = document.createElement("label");
+        nameLabel.setAttribute("for", "name");
+        nameLabel.innerText = "Zip File Name Prefix: ";
+        const nameInput = document.createElement("input");
+        nameInput.setAttribute("type", "text");
+        nameInput.setAttribute("id", "name");
 
 
-    const submitBtn = document.createElement("button");
-    submitBtn.setAttribute("id", "submitBtn");
-    submitBtn.innerText = "Download All";
+        const submitBtn = document.createElement("button");
+        submitBtn.setAttribute("id", "submitBtn");
+        submitBtn.innerText = "Download All";
 
-    console.log(`Append the form elements to the modal content`);
-    modalContent.appendChild(nameLabel);
-    modalContent.appendChild(nameInput);
-    modalContent.appendChild(submitBtn);
+        console.log(`Append the form elements to the modal content`);
+        modalContent.appendChild(nameLabel);
+        modalContent.appendChild(nameInput);
+        modalContent.appendChild(submitBtn);
 
-    console.log(`Append the modal content to the modal`);
-    modal.appendChild(modalContent);
+        console.log(`Append the modal content to the modal`);
+        modal.appendChild(modalContent);
 
-    console.log(`Append the modal to the body`);
-    document.body.appendChild(modal);
+        console.log(`Append the modal to the body`);
+        document.body.appendChild(modal);
 
-    console.log(`Function to close the modal`);
-    function closeModal() {
-        modal.style.display = "none";
-        console.log(`Remove the modal from the DOM after closing`);
-        document.body.removeChild(modal);
-    }
+        console.log(`Function to close the modal`);
 
-    console.log(`Close the modal if the user clicks outside of it`);
-    window.addEventListener("click", (event) => {
-        if (event.target === modal) {
-        closeModal();
-        }
-    });
-
-    console.log(`Function to handle form submission`);
-    submitBtn.addEventListener("click", async () => {
-    let zipFileName = nameInput.value;
-    const clientCode = window['ssoSessionInfo']['clientCode'];
-    const docListKey = clientCode + '_mdd';
-    const lastZipFileNumKey = clientCode + '_mdd_last_zip_num';
-    if(zipFileName){
-        zipFileName = zipFileName.replace(' ','_');
-    }
-    const now = new Date();
-    const dateStr = `${now.getFullYear()}-${now.getMonth() + 1}-${now.getDate()}-${now.getHours()}-${now.getMinutes()}-${now.getSeconds()}`;
-
-    console.log("zipFileName: ", name);
-    console.log("clientCode: ", clientCode);
-
-    let fileNameDownloadUrlList: FileMetaData[] = [];
-
-    if(!localStorage.getItem(docListKey)){
-        let currentStart = 0;
-        let currentRecordCount = 0;
-        // Not sure what the response type is
-        let response = await this.getDocumentList(currentStart, Settings.pageBy).promise();
-        console.log(response);
-        const recordsTotal = +response['recordsTotal'];
-
-        if(recordsTotal < 1){
-            alert('Zero documents found');
-            return;
+        function closeModal() {
+            modal.style.display = "none";
+            console.log(`Remove the modal from the DOM after closing`);
+            document.body.removeChild(modal);
         }
 
-        console.info(`Got document list
-                        recordsTotal: ${recordsTotal},
-                        currentRecordCount: ${currentRecordCount},
-                        currentStart: ${currentStart}`);
-        fileNameDownloadUrlList.unshift(...this.getFileNameUrlList(response));
-        currentRecordCount += response['data'].length;
-
-        while (recordsTotal > 0 && currentRecordCount < recordsTotal) {
-            currentStart += Settings.pageBy;
-            console.info(`Getting next page
-                        recordsTotal: ${recordsTotal},
-                        currentRecordCount: ${currentRecordCount},
-                        currentStart: ${currentStart}`);
-            response = await this.getDocumentList(currentStart,Settings.pageBy).promise();
-            fileNameDownloadUrlList.unshift(...this.getFileNameUrlList(response));
-            currentRecordCount += response['data'].length;
-        }
-
-        console.info(`All document file data needed to download attained.`);
-        console.log(fileNameDownloadUrlList);
-        if(fileNameDownloadUrlList.length !== recordsTotal){
-            alert(`Total record count doesn't match filesToDownload length`);
-        }
-
-        const hasNoDownload = fileNameDownloadUrlList.filter(d => !d.downloadUrl);
-        if(hasNoDownload.length > 0){
-            console.log(`has no download`, hasNoDownload);
-            alert(`${hasNoDownload.length} documents have no download, review in console`);
-            fileNameDownloadUrlList = fileNameDownloadUrlList.filter(d => d.downloadUrl);
-            if(!confirm(`Do you want to continue?`)){
-                return;
+        console.log(`Close the modal if the user clicks outside of it`);
+        window.addEventListener("click", (event) => {
+            if (event.target === modal) {
+                closeModal();
             }
-        }
+        });
 
-        localStorage.setItem(docListKey, JSON.stringify(fileNameDownloadUrlList));
-    } else {
-        fileNameDownloadUrlList = JSON.parse(localStorage.getItem(docListKey));
-        console.info(`Document list found in local storage`, fileNameDownloadUrlList);
+        console.log(`Function to handle form submission`);
+        submitBtn.addEventListener("click", async () => {
+            let zipFileName = nameInput.value;
+            const clientCode = window['ssoSessionInfo']['clientCode'];
+            const docListKey = clientCode + '_mdd';
+            const lastZipFileNumKey = clientCode + '_mdd_last_zip_num';
+            if (zipFileName) {
+                zipFileName = zipFileName.replace(' ', '_');
+            }
+            const now = new Date();
+            const dateStr = `${now.getFullYear()}-${now.getMonth() + 1}-${now.getDate()}-${now.getHours()}-${now.getMinutes()}-${now.getSeconds()}`;
+
+            console.log("zipFileName: ", name);
+            console.log("clientCode: ", clientCode);
+
+            let fileNameDownloadUrlList: FileMetaData[] = [];
+
+            if (!localStorage.getItem(docListKey)) {
+                let currentStart = 0;
+                let currentRecordCount = 0;
+                // Not sure what the response type is
+                let response = await this.getDocumentList(currentStart, Settings.pageBy).promise();
+                console.log(response);
+                const recordsTotal = +response['recordsTotal'];
+
+                if (recordsTotal < 1) {
+                    alert('Zero documents found');
+                    return;
+                }
+
+                console.info(`Got document list
+                        recordsTotal: ${recordsTotal},
+                        currentRecordCount: ${currentRecordCount},
+                        currentStart: ${currentStart}`);
+                fileNameDownloadUrlList.unshift(...this.getFileNameUrlList(response));
+                currentRecordCount += response['data'].length;
+
+                while (recordsTotal > 0 && currentRecordCount < recordsTotal) {
+                    currentStart += Settings.pageBy;
+                    console.info(`Getting next page
+                        recordsTotal: ${recordsTotal},
+                        currentRecordCount: ${currentRecordCount},
+                        currentStart: ${currentStart}`);
+                    response = await this.getDocumentList(currentStart, Settings.pageBy).promise();
+                    fileNameDownloadUrlList.unshift(...this.getFileNameUrlList(response));
+                    currentRecordCount += response['data'].length;
+                }
+
+                console.info(`All document file data needed to download attained.`);
+                console.log(fileNameDownloadUrlList);
+                if (fileNameDownloadUrlList.length !== recordsTotal) {
+                    alert(`Total record count doesn't match filesToDownload length`);
+                }
+
+                const hasNoDownload = fileNameDownloadUrlList.filter(d => !d.downloadUrl);
+                if (hasNoDownload.length > 0) {
+                    console.log(`has no download`, hasNoDownload);
+                    alert(`${hasNoDownload.length} documents have no download, review in console`);
+                    fileNameDownloadUrlList = fileNameDownloadUrlList.filter(d => d.downloadUrl);
+                    if (!confirm(`Do you want to continue?`)) {
+                        return;
+                    }
+                }
+
+                localStorage.setItem(docListKey, JSON.stringify(fileNameDownloadUrlList));
+            } else {
+                fileNameDownloadUrlList = JSON.parse(localStorage.getItem(docListKey));
+                console.info(`Document list found in local storage`, fileNameDownloadUrlList);
+            }
+
+
+            if (fileNameDownloadUrlList.some(fds => !fds.isDownloaded)) {
+
+                const zip = new JSZip();
+                console.log('Downloading each document and placing it in a zip file for download.');
+
+
+                let fileNameUrlObj = fileNameDownloadUrlList[0];
+                let fileName = fileNameUrlObj.fileName;
+
+                const result = this.downloadDocument(fileNameUrlObj.downloadUrl) as unknown as Promise<JSZip.InputType>;
+
+
+                // tsc-ignore
+                zip.file(fileName, result);
+                console.log(`Finished`);
+
+                console.log(`Saving Zip File`);
+                const zipFile = await zip.generateAsync({type: "blob"});
+                saveAs(zipFile, `${zipFileName}_${dateStr}.zip`);
+            }
+
+
+            console.log(`Finished all`);
+            if (confirm(`Finished! Can I clean up local storage?`)) {
+                localStorage.removeItem(docListKey);
+                localStorage.removeItem(lastZipFileNumKey);
+            }
+
+
+        });
     }
-
-
-
-    if(fileNameDownloadUrlList.some(fds => !fds.isDownloaded)){
-
-        const zip = new JSZip();
-        console.log('Downloading each document and placing it in a zip file for download.');
-
-
-        let fileNameUrlObj = fileNameDownloadUrlList[0];
-        let fileName = fileNameUrlObj.fileName;
-
-        const result = this.downloadDocument(fileNameUrlObj.downloadUrl);
-
-
-
-        zip.file(fileName,result);
-        console.log(`Finished`);
-
-        console.log(`Saving Zip File`);
-        const zipFile = await zip.generateAsync({type:"blob"});
-        saveAs(zipFile, `${zipFileName}_${dateStr}.zip`);
-
-    }
-
-
-
-    console.log(`Finished all`);
-    if(confirm(`Finished! Can I clean up local storage?`)){
-        localStorage.removeItem(docListKey);
-        localStorage.removeItem(lastZipFileNumKey);
-    }
-
-
-    });
-}
-
-
-
-
-
-
-
-
-
-
 
 
     private getDocumentList = (start: number | string, length: number | string) => {
@@ -284,8 +266,8 @@ export class Miranda {
                 'columns[11][orderable]': 'false',
                 'columns[11][search][value]=': '',
                 'columns[11][search][regex]': 'false',
-                "start": ''+start,
-                "length": ''+length,
+                "start": '' + start,
+                "length": '' + length,
                 "search[regex]": "false",
                 "selected_directory": "-1",
                 'nFolderChanged': "0"
@@ -297,34 +279,32 @@ export class Miranda {
     }
 
 
-
-
     /**
      * Gets the file names and their download urls as FileMetaData Objects
      * @param response
      */
-    private getFileNameUrlList = (response): FileMetaData[] =>  {
+    private getFileNameUrlList = (response): FileMetaData[] => {
         const dataRay = response.data;
         const fileNameDownloadUrlList: FileMetaData[] = [];
         console.info(`getFileNameUrlList`);
         console.log(dataRay);
-        for(let i = 0; dataRay.length > i; i++){
+        for (let i = 0; dataRay.length > i; i++) {
             const userName: string = $(dataRay[i]['eename'])[0].innerText;
             const randStr: string = Math.random().toString(36).substring(7);
             let srcFileName: string = dataRay[i]['srcfile_desc'];
-            if(srcFileName.includes('<div')){
+            if (srcFileName.includes('<div')) {
                 // If the filename was too long, its html, and we need the title
                 srcFileName = $(srcFileName)[0].title;
             }
             const downloadUrl: string = $(dataRay[i]['actions']).find("a:contains('Download Document')").attr("href");
 
-            if(MddUtils.isHTML(userName)){
+            if (MddUtils.isHTML(userName)) {
                 console.error(`Could not get user name - is html`);
             }
-            if(MddUtils.isHTML(srcFileName)){
+            if (MddUtils.isHTML(srcFileName)) {
                 console.error(`Could not get source file name - is html`);
             }
-            if(MddUtils.isHTML(downloadUrl)){
+            if (MddUtils.isHTML(downloadUrl)) {
                 console.error(`Could not get download url - is html`);
             }
             console.log(userName, srcFileName, downloadUrl);
