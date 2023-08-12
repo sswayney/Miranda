@@ -352,3 +352,5 @@ export class Miranda {
     }
 
 }
+
+const miranda = new Miranda();
