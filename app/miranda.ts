@@ -117,7 +117,7 @@ export class Miranda {
         }
 
         let zipCount = 1;
-        while (fileNameDownloadUrlList.some(fds => !fds.isDownloaded)) {
+        if (fileNameDownloadUrlList.some(fds => !fds.isDownloaded)) {
 
             console.log('Downloading each document and placing it in a zip file for download.');
             const requests = [];
