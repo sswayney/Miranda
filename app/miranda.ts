@@ -418,14 +418,16 @@ export class Miranda {
      * @param fileMetaDataList
      */
     private downloadData = async (fileMetaDataList: FileMetaData[]): Promise<string[]> => {
+        debugger;
         const maxConcurrentRequests = 6;
-        const maxDataSize = 1 * 1024 * 1024 * 1024; // 1 gigabytes in bytes
+        const maxDataSize = (1 * 1024 * 1024 * 1024)/4; // 1 gigabytes in bytes
         let totalDownloaded = 0;
         const downloadedData: DownloadResult[] = [];
 
         const downloadPromises: TempType[] = [];
 
-        for (const fileMetaData of fileMetaDataList) {
+        for (let i = 0; i < fileMetaDataList.length; i++) {
+            const fileMetaData = fileMetaDataList[i];
             if (totalDownloaded >= maxDataSize) {
                 console.log(`Reached max size of data. ${totalDownloaded} not downloading any more.`);
                 break;
