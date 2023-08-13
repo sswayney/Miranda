@@ -121,6 +121,7 @@ export class Miranda {
 
         while (fileNameDownloadUrlList.some(fds => !fds.isDownloaded)) {
             console.info(`Starting download....`);
+            debugger;
             const unDownloadedFiles = fileNameDownloadUrlList.filter(f => !f.isDownloaded);
             let downloadedUrls = await this.downloadData(unDownloadedFiles);
             console.info(`Downloaded files`, downloadedUrls);
@@ -460,7 +461,7 @@ export class Miranda {
         }
 
         await Promise.all(downloadPromises);
-
+        debugger;
         console.log(`Preparing to zip ${downloadedData.length} files`);
 
         // Create a zip file using jszip
