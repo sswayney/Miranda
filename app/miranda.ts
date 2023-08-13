@@ -441,7 +441,7 @@ export class Miranda {
                 let url = await Promise.race(downloadPromises.map(x => x.finished));
                 url = url.replace('/v4/cl/web.php/../','');
                 const index = downloadPromises.map(d => d.ddr.xhr.responseURL.toLowerCase().replace("https://www.paycomonline.net/v4/cl/","")).indexOf(url.toLowerCase());
-                downloadPromises = downloadPromises.slice(index, 1);
+                downloadPromises.splice(index, 1);
                 // Do we need to remove it?
                 console.log(`Finished waiting, max requests now at ${downloadPromises.length}`);
             }
