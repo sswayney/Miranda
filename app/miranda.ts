@@ -2,7 +2,7 @@ import {MddUtils} from "./utils";
 import {AjaxRequestSettings, FileMetaData} from "./types";
 import {Settings} from "./settings";
 import * as JSZip from "jszip";
-import {createWriteStream} from "streamsaver"
+import { createWriteStream } from "streamsaver"
 import {LocalStorageMdd} from "./local-storage";
 import {bufferCount, concatMap, forkJoin, from, lastValueFrom} from "rxjs";
 
@@ -148,13 +148,14 @@ export class Miranda {
             // const zipFile = await zip.generateAsync({type: "blob"});
             // saveAs(zipFile, `${zipFileName}_${dateStr}.zip`);
 
+
             // StreamSaver.js to save the zip file
             const fileStream = createWriteStream(`${zipFileName}_${dateStr}.zip`);
-            const writer = fileStream.getWriter();
+
             const blob = await zip.generateAsync({ type: 'blob' });
 
-            await writer.write(blob);
-            await writer.close();
+            await blob.stream().pipeTo(fileStream);
+
 
 
             console.log(`Finished`);
