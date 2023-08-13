@@ -435,9 +435,9 @@ export class Miranda {
 
             if (downloadPromises.length >= maxConcurrentRequests) {
                 console.log(`Reached max requests ${downloadPromises.length}. Waiting for one to finish.`);
-                const url = await Promise.race(downloadPromises.map(x => x.finished));
-                const downloadUrl = `${Settings.endpoints.baseUrl}${url}`;
-                const index = downloadPromises.map(d => d.ddr.xhr.responseURL.toLowerCase()).indexOf(downloadUrl.toLowerCase());
+                let url = await Promise.race(downloadPromises.map(x => x.finished));
+                url = url.replace('/v4/cl/web.php/../','');
+                const index = downloadPromises.map(d => d.ddr.xhr.responseURL.toLowerCase()).indexOf(url.toLowerCase());
                 downloadPromises.slice(index, 1);
                 // Do we need to remove it?
                 console.log(`Finished waiting, max requests now at ${downloadPromises.length}`);
