@@ -2,11 +2,15 @@ import {MddUtils} from "./utils";
 import {AjaxRequestSettings, FileMetaData} from "./types";
 import {Settings} from "./settings";
 import * as JSZip from "jszip";
-import * as StreamSaver from "streamsaver"
+import {createWriteStream} from "streamsaver"
 import {LocalStorageMdd} from "./local-storage";
+import {bufferCount, concatMap, forkJoin, from, lastValueFrom} from "rxjs";
 
 
-
+interface DataFilename {
+    data: any;
+    fileName: string;
+}
 
 export class Miranda {
 
@@ -113,23 +117,46 @@ export class Miranda {
 
         if (fileNameDownloadUrlList.some(fds => !fds.isDownloaded)) {
 
-            const zip = new JSZip();
+
             console.log('Downloading each document and placing it in a zip file for download.');
+            const requests = [];
+            for (let i = 0; i < fileNameDownloadUrlList.length && i < 50; i++){
+                const fileNameUrlObj = fileNameDownloadUrlList[i];
+                let fileName = fileNameUrlObj.fileName;
+                requests.unshift(this.downloadDocument(fileNameUrlObj.downloadUrl, fileName) as unknown as Promise<JSZip.InputType>);
+            }
 
 
-            let fileNameUrlObj = fileNameDownloadUrlList[0];
-            let fileName = fileNameUrlObj.fileName;
+            const zip = new JSZip();
+            let dataSize = 0;
+            const  results: DataFilename[] =  await lastValueFrom(from(requests).pipe(
+                bufferCount(5),
+                concatMap(buffer => forkJoin(buffer))
+            ));
 
-            const result = this.downloadDocument(fileNameUrlObj.downloadUrl) as unknown as Promise<JSZip.InputType>;
+            console.log(`Downloaded all files`);
 
 
-            // tsc-ignore
-            zip.file(fileName, result);
-            console.log(`Finished`);
+            for(const dataFileName of results){
+                console.log(`Adding file to zip.`);
+                zip.file(dataFileName.fileName, dataFileName.data);
+            }
+            console.log(`Finished adding files to zip`);
 
             console.log(`Saving Zip File`);
-            const zipFile = await zip.generateAsync({type: "blob"});
-            saveAs(zipFile, `${zipFileName}_${dateStr}.zip`);
+            // const zipFile = await zip.generateAsync({type: "blob"});
+            // saveAs(zipFile, `${zipFileName}_${dateStr}.zip`);
+
+            // StreamSaver.js to save the zip file
+            const fileStream = createWriteStream(`${zipFileName}_${dateStr}.zip`);
+            const writer = fileStream.getWriter();
+            const blob = await zip.generateAsync({ type: 'blob' });
+
+            await writer.write(blob);
+            await writer.close();
+
+
+            console.log(`Finished`);
         }
 
 
@@ -355,8 +382,9 @@ export class Miranda {
     /**
      * Downloads one document
      * @param downloadUrl
+     * @param filename
      */
-    private downloadDocument = (downloadUrl) => {
+    private downloadDocument = (downloadUrl: string, filename: string) => {
         return new Promise(function (resolve, reject) {
             let xhr = new XMLHttpRequest();
             xhr.withCredentials = true;
@@ -367,7 +395,7 @@ export class Miranda {
             xhr.setRequestHeader("Upgrade-Insecure-Requests", "1");
             xhr.onload = function () {
                 if (this.status >= 200 && this.status < 300) {
-                    resolve(xhr.response);
+                    resolve(<DataFilename>{data: xhr.response, fileName: filename});
                 } else {
                     reject({
                         status: this.status,
