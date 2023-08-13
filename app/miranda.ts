@@ -13,7 +13,7 @@ export interface DownloadDocumentResult {
 
 export interface TempType {
     ddr: DownloadDocumentResult;
-    finished: Promise<void>;
+    finished: Promise<string>;
 }
 
 export class Miranda {
@@ -435,8 +435,8 @@ export class Miranda {
 
             if (downloadPromises.length >= maxConcurrentRequests) {
                 console.log(`Reached max requests ${downloadPromises.length}. Waiting for one to finish.`);
-                const removeIt =  Promise.race(downloadPromises.map(x => x.finished));
-                const index = downloadPromises.map(d => d.finished).indexOf(removeIt);
+                const url = await Promise.race(downloadPromises.map(x => x.finished));
+                const index = downloadPromises.map(d => d.ddr.xhr.responseURL).indexOf(url);
                 downloadPromises.slice(index, 1);
                 // Do we need to remove it?
                 console.log(`Finished waiting, max requests now at ${downloadPromises.length}`);
@@ -446,6 +446,7 @@ export class Miranda {
             const downloadPromise = this.downloadDocument(fileMetaData.downloadUrl);
             const promise = downloadPromise.response
                 .then((data) => {
+                    const _url = fileMetaData.downloadUrl;
                     totalDownloaded += data.byteLength;
                     console.log(`totalDownloaded data ${totalDownloaded}`);
                     // Todo: not sure about the data type here.
@@ -459,9 +460,11 @@ export class Miranda {
                             remainingPromise.ddr.xhr.abort();
                         }
                     }
+                    return _url;
                 })
                 .catch((error) => {
                     console.error(`Error fetching ${fileMetaData.downloadUrl}:`, error);
+                    return 'error';
                 });
 
             downloadPromises.push({ddr: downloadPromise, finished: promise});
