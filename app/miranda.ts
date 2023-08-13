@@ -460,7 +460,7 @@ export class Miranda {
             downloadPromises.push({ddr: downloadPromise, finished: promise});
         }
 
-        await Promise.all(downloadPromises);
+        await Promise.all(downloadPromises.map(dp => dp.finished));
         debugger;
         console.log(`Preparing to zip ${downloadedData.length} files`);
 
