@@ -427,12 +427,15 @@ export class Miranda {
 
         for (const fileMetaData of fileMetaDataList) {
             if (totalDownloaded >= maxDataSize) {
+                console.log(`Reached max size of data. ${totalDownloaded} not downloading any more.`);
                 break;
             }
 
             if (downloadPromises.length >= maxConcurrentRequests) {
-                const finishedPromise = Promise.race(downloadPromises.map(x => x.finished));
-                downloadPromises.splice(downloadPromises.map(x => x.finished).indexOf(finishedPromise), 1);
+                console.log(`Reached max requests ${downloadPromises.length}. Waiting for one to finish.`);
+                await Promise.race(downloadPromises.map(x => x.finished));
+                // Do we need to remove it?
+                console.log(`Finished waiting, max requests now at ${downloadPromises.length}`);
             }
 
 
