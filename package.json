@@ -21,7 +21,8 @@
     "file-saver": "2.0.5",
     "jszip": "^3.10.1",
     "streamsaver": "^2.0.6",
-    "rxjs": "^7.8.1"
+    "rxjs": "^7.8.1",
+    "web-streams-polyfill": "^3.2.1"
   },
   "devDependencies": {
     "@types/file-saver": "^2.0.5",

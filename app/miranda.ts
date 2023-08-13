@@ -139,6 +139,7 @@ export class Miranda {
 
             for(const dataFileName of results){
                 console.log(`Adding file to zip.`);
+                debugger;
                 zip.file(dataFileName.fileName, dataFileName.data);
             }
             console.log(`Finished adding files to zip`);
