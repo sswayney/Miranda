@@ -5,6 +5,7 @@ import * as JSZip from "jszip";
 import * as fileSaver from "file-saver"
 import {LocalStorageMdd} from "./local-storage";
 import {bufferCount, concatMap, forkJoin, from, lastValueFrom} from "rxjs";
+import {Axios, AxiosInstance} from 'axios';
 
 
 interface DataFilename {
@@ -84,14 +85,13 @@ export class Miranda {
 
         console.log(`Function to handle form submission`);
         submitBtn.addEventListener("click", async () => {
-            await this.downLoadAll(nameInput);
+            await this.downLoadAll(nameInput.value);
         });
     }
 
 
-    private async downLoadAll(nameInput: HTMLInputElement): Promise<void> {
+    private async downLoadAll(zipFileName: string): Promise<void> {
         console.log(`downLoadAll`);
-        let zipFileName = nameInput.value;
         const dateStr = MddUtils.generateDateString();
         const docListKey = Settings.localStorageKeys.fileMetaData;
         if (zipFileName) {
@@ -117,6 +117,16 @@ export class Miranda {
         }
 
         let zipCount = 1;
+        const axiosClient = new Axios({
+            responseType: 'arraybuffer',
+            withCredentials: true,
+            headers: {
+                Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
+                'Accept-Language': 'en-US,en;q=0.9',
+                'Upgrade-Insecure-Requests': '1',
+                Connection: 'keep-alive'
+            }
+        });
         if (fileNameDownloadUrlList.some(fds => !fds.isDownloaded)) {
 
             console.log('Downloading each document and placing it in a zip file for download.');
@@ -124,14 +134,14 @@ export class Miranda {
             for (let i = 0; i < fileNameDownloadUrlList.length && i < 100; i++){
                 const fileNameUrlObj = fileNameDownloadUrlList[i];
                 let fileName = fileNameUrlObj.fileName;
-                requests.unshift(this.downloadDocument(fileNameUrlObj.downloadUrl, fileName) as unknown as Promise<JSZip.InputType>);
+                requests.unshift(this.downloadDocument(axiosClient, fileNameUrlObj.downloadUrl, fileName));
             }
 
 
 
 
             from(requests).pipe(
-                bufferCount(50),
+                bufferCount(20),
                 concatMap(buffer => forkJoin(buffer))
             ).subscribe(async (results: DataFilename[]) => {
 
@@ -387,36 +397,49 @@ export class Miranda {
 
     /**
      * Downloads one document
+     * @param axiosClient
      * @param downloadUrl
      * @param filename
      */
-    private downloadDocument = (downloadUrl: string, filename: string) => {
-        return new Promise(function (resolve, reject) {
-            let xhr = new XMLHttpRequest();
-            xhr.withCredentials = true;
-            xhr.responseType = 'arraybuffer';
-            xhr.open("GET", `${Settings.endpoints.baseUrl}${downloadUrl}`);
-            xhr.setRequestHeader("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7");
-            xhr.setRequestHeader("Accept-Language", "en-US,en;q=0.9");
-            xhr.setRequestHeader("Upgrade-Insecure-Requests", "1");
-            xhr.onload = function () {
-                if (this.status >= 200 && this.status < 300) {
-                    resolve(<DataFilename>{data: xhr.response, fileName: filename, downloadUrl: downloadUrl });
-                } else {
-                    reject({
-                        status: this.status,
-                        statusText: xhr.statusText
-                    });
-                }
-            };
-            xhr.onerror = function () {
-                reject({
-                    status: this.status,
-                    statusText: xhr.statusText
-                });
-            };
-            xhr.send();
-        });
+
+    private downloadDocument = (axiosClient, downloadUrl: string, filename: string): Promise<DataFilename> => {
+
+
+
+
+        return axiosClient.get(`${Settings.endpoints.baseUrl}${downloadUrl}`).then(result => <DataFilename>{data: result.data.response, fileName: filename, downloadUrl: downloadUrl });
+
+
+
+
+        // return new Promise(function (resolve, reject) {
+        //     let xhr = new XMLHttpRequest();
+        //     xhr.withCredentials = true;
+        //     xhr.responseType = 'arraybuffer';
+        //     xhr.open("GET", `${Settings.endpoints.baseUrl}${downloadUrl}`);
+        //     xhr.setRequestHeader("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7");
+        //     xhr.setRequestHeader("Accept-Language", "en-US,en;q=0.9");
+        //     xhr.setRequestHeader("Upgrade-Insecure-Requests", "1");
+        //     xhr.onload = function () {
+        //         if (this.status >= 200 && this.status < 300) {
+        //             resolve(<DataFilename>{data: xhr.response, fileName: filename, downloadUrl: downloadUrl });
+        //         } else {
+        //             reject({
+        //                 status: this.status,
+        //                 statusText: xhr.statusText
+        //             });
+        //         }
+        //     };
+        //     xhr.onerror = function () {
+        //         reject({
+        //             status: this.status,
+        //             statusText: xhr.statusText
+        //         });
+        //     };
+        //     xhr.send();
+        // });
+
+
     }
 
 }
