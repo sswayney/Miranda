@@ -141,7 +141,7 @@ export class Miranda {
 
 
             from(requests).pipe(
-                bufferCount(20),
+                bufferCount(50),
                 concatMap(buffer => forkJoin(buffer))
             ).subscribe(async (results: DataFilename[]) => {
 
@@ -407,7 +407,7 @@ export class Miranda {
 
 
 
-        return axiosClient.get(`${Settings.endpoints.baseUrl}${downloadUrl}`).then(result => <DataFilename>{data: result.data.response, fileName: filename, downloadUrl: downloadUrl });
+        return axiosClient.get(`${Settings.endpoints.baseUrl}${downloadUrl}`).then(result => <DataFilename>{data: result.data, fileName: filename, downloadUrl: downloadUrl });
 
 
 
