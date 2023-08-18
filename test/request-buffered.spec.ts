@@ -7,7 +7,9 @@ jest.mock('axios');
 
 
 // Mock axios responses
-(axios.get as jest.Mock).mockImplementation((url) => url !== 'errorurl' ? Promise.resolve({ data: '0123456789' }) : Promise.reject('badurl'));
+(axios.get as jest.Mock).mockImplementation((url) => {
+    return url !== 'errorurl' ? Promise.resolve({ data: '0123456789' }) : Promise.reject('badurl')
+});
 
 
 describe('makeBufferedRequests', () => {
