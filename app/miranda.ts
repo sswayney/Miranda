@@ -459,10 +459,10 @@ export class Miranda {
 
     private getDownloadStatusText(fileNameDownloadUrlList: FileMetaData[]) {
         const downloadCount = fileNameDownloadUrlList.filter(f => f.isDownloaded).length;
-        const notDownloadCount = fileNameDownloadUrlList.filter(f => !f.isDownloaded).length;
-        const percentDone = notDownloadCount < 1 ? 100 : (Math.abs(downloadCount / notDownloadCount) * 100).toFixed(2);
+        const totalCount = fileNameDownloadUrlList.length;
+        const percentDone = totalCount < 1 ? 100 : (Math.abs(downloadCount / totalCount) * 100).toFixed(2);
         return`Downloaded count: ${downloadCount}
-         Not Downloaded count: ${notDownloadCount}
+         Not Downloaded count: ${totalCount}
          Percent Finished ${percentDone}%`;
     }
 
