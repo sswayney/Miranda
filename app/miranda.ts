@@ -124,6 +124,7 @@ export class Miranda {
             const allFilesDownloaded = await this.downLoadAll();
             if(!allFilesDownloaded){
                 submitBtn.disabled = false;
+                this.setLogOutput('Finished downloading all.');
             }
 
             clearBtn.disabled = false;
@@ -251,31 +252,18 @@ export class Miranda {
                 fileNameDownloadUrlList.unshift(...this.getFileNameUrlList(response));
                 currentRecordCount += response['data'].length;
 
-
-
-
-
-
-                // TODO: PUT BACK ONLY FOR TEST
-                // while (recordsTotal > 0 && currentRecordCount < recordsTotal) {
-                //     currentStart += Settings.pageBy;
-                //     logText = `Getting next page
-                //         recordsTotal: ${recordsTotal},
-                //         currentRecordCount: ${currentRecordCount},
-                //         currentStart: ${currentStart}`;
-                //     console.info(logText);
-                //     this.setLogOutput(logText);
-                //     response = await this.getDocumentList(currentStart, Settings.pageBy).promise();
-                //     fileNameDownloadUrlList.unshift(...this.getFileNameUrlList(response));
-                //     currentRecordCount += response['data'].length;
-                // }
-
-
-
-
-
-
-
+                while (recordsTotal > 0 && currentRecordCount < recordsTotal) {
+                    currentStart += Settings.pageBy;
+                    logText = `Getting next page
+                        recordsTotal: ${recordsTotal},
+                        currentRecordCount: ${currentRecordCount},
+                        currentStart: ${currentStart}`;
+                    console.info(logText);
+                    this.setLogOutput(logText);
+                    response = await this.getDocumentList(currentStart, Settings.pageBy).promise();
+                    fileNameDownloadUrlList.unshift(...this.getFileNameUrlList(response));
+                    currentRecordCount += response['data'].length;
+                }
 
                 logText = `All document file data needed to download attained.`;
                 console.info(logText);
