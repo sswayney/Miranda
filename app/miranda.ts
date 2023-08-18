@@ -10,13 +10,14 @@ import {makeBufferedRequests} from "./buffered-request";
 
 export class Miranda {
 
+    // Used to keep the status of how many we download vs needed
     private statusOutput: HTMLParagraphElement;
+    // General messages to keep user updated.
     private logOutput: HTMLParagraphElement;
 
     constructor() {
         console.info('Miranda Constructor Called. Opening Modal.');
         this.openModal();
-
     }
 
     private setStatusOutPut(text: string): void {
@@ -28,7 +29,6 @@ export class Miranda {
     }
 
     private openModal = () => {
-
         // CREATE MODAL AND UI ELEMENTS
 
         console.log(`Create the modal div and its content`);
@@ -70,6 +70,8 @@ export class Miranda {
 
         const clearBtn = document.createElement("button");
         clearBtn.setAttribute("id", "clearBtn");
+        clearBtn.setAttribute("title", `If you have saved progress, this will delete it and start you over.
+        You should clear this when you are finished downloading everything.`);
         clearBtn.innerText = "Clear Local Storage History";
         clearBtn.disabled = !hasDownloadInLocalStorage;
 
@@ -86,9 +88,6 @@ export class Miranda {
 
         console.log(`Append the modal to the body`);
         document.body.appendChild(modal);
-
-
-
 
         // Set status output
         if(hasDownloadInLocalStorage) {
@@ -116,10 +115,10 @@ export class Miranda {
         console.log(`Function to handle form submission`);
         submitBtn.addEventListener("click", async () => {
             submitBtn.disabled = true;
-            clearBtn.disabled;
+            clearBtn.disabled = true;
             await this.downLoadAll();
             submitBtn.disabled = false;
-            clearBtn.disabled;
+            clearBtn.disabled = false;
         });
 
         console.log(`Function to clear storage`);
@@ -127,6 +126,7 @@ export class Miranda {
             if(confirm(`Are you sure you want to clear your current download status? You will start from the start.`)){
                 LocalStorageMdd.clearAll();
                 this.setStatusOutPut('No previous downloads to continue.');
+                submitBtn.innerText = "Start Downloading";
             }
         });
     }
@@ -194,7 +194,7 @@ export class Miranda {
         }
 
         console.log(`Finished download all in this batch`);
-        this.setLogOutput('Finished, download more in needed.');
+        this.setLogOutput('Finished, download more if needed.');
         const text = this.getDownloadStatusText(fileNameDownloadUrlList);
         console.log(text);
         this.setStatusOutPut(text);
@@ -212,13 +212,9 @@ export class Miranda {
     private async getAllFileMetaData(): Promise<FileMetaData[]> | never {
         let fileNameDownloadUrlList: FileMetaData[] = [];
 
-        if (LocalStorageMdd.getFileMetaDataFromLocalStorage()) {
-            if (!confirm(`Saved downloaded file progress found in local storage. Do you want to continue were you left off?`)) {
-                LocalStorageMdd.clearAll();
-            }
-        }
-
         if (!LocalStorageMdd.getFileMetaDataFromLocalStorage()) {
+
+            this.setLogOutput(`Getting full list of files so we can save progress.`);
             let currentStart = 0;
             let currentRecordCount = 0;
             // Not sure what the response type is
@@ -231,25 +227,31 @@ export class Miranda {
                 throw new Error(Settings.errorMessages.NoFilesFound);
             } else {
 
-                console.info(`Got document list
+                let logText = `Got document list
                         recordsTotal: ${recordsTotal},
                         currentRecordCount: ${currentRecordCount},
-                        currentStart: ${currentStart}`);
+                        currentStart: ${currentStart}`;
+                this.setLogOutput(logText);
+                console.info(logText);
                 fileNameDownloadUrlList.unshift(...this.getFileNameUrlList(response));
                 currentRecordCount += response['data'].length;
 
                 while (recordsTotal > 0 && currentRecordCount < recordsTotal) {
                     currentStart += Settings.pageBy;
-                    console.info(`Getting next page
+                    logText = `Getting next page
                         recordsTotal: ${recordsTotal},
                         currentRecordCount: ${currentRecordCount},
-                        currentStart: ${currentStart}`);
+                        currentStart: ${currentStart}`;
+                    console.info(logText);
+                    this.setLogOutput(logText);
                     response = await this.getDocumentList(currentStart, Settings.pageBy).promise();
                     fileNameDownloadUrlList.unshift(...this.getFileNameUrlList(response));
                     currentRecordCount += response['data'].length;
                 }
 
-                console.info(`All document file data needed to download attained.`);
+                logText = `All document file data needed to download attained.`;
+                console.info(logText);
+                this.setLogOutput(logText);
                 console.log(fileNameDownloadUrlList);
                 if (fileNameDownloadUrlList.length !== recordsTotal) {
                     alert(`Total record count doesn't match filesToDownload length`);
