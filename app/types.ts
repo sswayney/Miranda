@@ -15,7 +15,8 @@ export interface AjaxRequestSettings {
     url: string;
 }
 
-export interface DownloadResult {
-    url: string;
-    data: ArrayBuffer;
+export interface DataFilename {
+    data?: any;
+    fileName: string;
+    downloadUrl: string;
 }

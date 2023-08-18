@@ -1,29 +1,36 @@
 import {MddUtils} from "./utils";
-import {AjaxRequestSettings, DownloadResult, FileMetaData} from "./types";
+import {AjaxRequestSettings, DataFilename, FileMetaData} from "./types";
 import {Settings} from "./settings";
 import * as JSZip from "jszip";
-import  {createWriteStream} from "streamsaver"
+import * as fileSaver from "file-saver"
 import {LocalStorageMdd} from "./local-storage";
+import {Axios} from 'axios';
+import {makeBufferedRequests} from "./buffered-request";
 
-
-export interface DownloadDocumentResult {
-    response: Promise<ArrayBuffer>;
-    xhr: XMLHttpRequest;
-}
-
-export interface TempType {
-    ddr: DownloadDocumentResult;
-    finished: Promise<string>;
-}
 
 export class Miranda {
+
+    // Used to keep the status of how many we download vs needed
+    private statusOutput: HTMLParagraphElement;
+    // General messages to keep user updated.
+    private logOutput: HTMLParagraphElement;
 
     constructor() {
         console.info('Miranda Constructor Called. Opening Modal.');
         this.openModal();
-
     }
+
+    private setStatusOutPut(text: string): void {
+        this.statusOutput.innerText = text;
+    }
+
+    private setLogOutput(text: string): void {
+        this.logOutput.innerText = text;
+    }
+
     private openModal = () => {
+        // CREATE MODAL AND UI ELEMENTS
+
         console.log(`Create the modal div and its content`);
         const modal = document.createElement("div");
         modal.setAttribute("id", "myModal");
@@ -47,22 +54,34 @@ export class Miranda {
         modalContent.style.borderRadius = "5px";
 
         console.log(`Create the form elements`);
-        const nameLabel = document.createElement("label");
-        nameLabel.setAttribute("for", "name");
-        nameLabel.innerText = "Zip File Name Prefix: ";
-        const nameInput = document.createElement("input");
-        nameInput.setAttribute("type", "text");
-        nameInput.setAttribute("id", "name");
+        this.statusOutput = document.createElement("p");
+        this.statusOutput.setAttribute("id", "statusOutput");
 
+        this.logOutput = document.createElement("p");
+        this.logOutput.setAttribute("id", "logOutput");
+
+        // Use what we may have in local storage to set ui texts.
+        const fileNameDownloadUrlList = LocalStorageMdd.getFileMetaDataFromLocalStorage();
+        const hasDownloadInLocalStorage = fileNameDownloadUrlList?.length > 0;
 
         const submitBtn = document.createElement("button");
         submitBtn.setAttribute("id", "submitBtn");
-        submitBtn.innerText = "Download All";
+        submitBtn.innerText = hasDownloadInLocalStorage ? "Download More" : "Start Downloading";
+
+        const clearBtn = document.createElement("button");
+        clearBtn.setAttribute("id", "clearBtn");
+        clearBtn.setAttribute("title", `If you have saved progress, this will delete it and start you over.
+        You should clear this when you are finished downloading everything.`);
+        clearBtn.innerText = "Clear Local Storage History";
+        clearBtn.disabled = !hasDownloadInLocalStorage;
 
         console.log(`Append the form elements to the modal content`);
-        modalContent.appendChild(nameLabel);
-        modalContent.appendChild(nameInput);
+        modalContent.appendChild(this.statusOutput);
+        modalContent.appendChild(this.logOutput);
+        modalContent.appendChild(document.createElement("br"));
         modalContent.appendChild(submitBtn);
+        modalContent.appendChild(clearBtn);
+
 
         console.log(`Append the modal content to the modal`);
         modal.appendChild(modalContent);
@@ -70,38 +89,65 @@ export class Miranda {
         console.log(`Append the modal to the body`);
         document.body.appendChild(modal);
 
-        console.log(`Function to close the modal`);
+        // Set status output
+        if(hasDownloadInLocalStorage) {
+            this.setStatusOutPut(this.getDownloadStatusText(fileNameDownloadUrlList));
 
+            if(fileNameDownloadUrlList.filter(f => !f.isDownloaded)){
+                // disable download more if we have none left
+                submitBtn.disabled = true;
+            }
+        } else {
+            this.setStatusOutPut('No previous downloads to continue.');
+        }
+
+        //// SET UP EVENTS
+
+        console.log(`Function to close the modal`);
         function closeModal() {
             modal.style.display = "none";
             console.log(`Remove the modal from the DOM after closing`);
             document.body.removeChild(modal);
         }
 
-        console.log(`Close the modal if the user clicks outside of it`);
-        window.addEventListener("click", (event) => {
-            if (event.target === modal) {
-                closeModal();
-            }
-        });
+        // console.log(`Close the modal if the user clicks outside of it`);
+        // window.addEventListener("click", (event) => {
+        //     if (event.target === modal) {
+        //         closeModal();
+        //     }
+        // });
 
         console.log(`Function to handle form submission`);
         submitBtn.addEventListener("click", async () => {
-            await this.downLoadAll(nameInput);
+            submitBtn.disabled = true;
+            clearBtn.disabled = true;
+            const allFilesDownloaded = await this.downLoadAll();
+            if(!allFilesDownloaded){
+                submitBtn.disabled = false;
+                this.setLogOutput('Finished downloading all.');
+            }
+
+            clearBtn.disabled = false;
+        });
+
+        console.log(`Function to clear storage`);
+        clearBtn.addEventListener("click", async () => {
+            if(confirm(`Are you sure you want to clear your current download status? You will start from the start.`)){
+                LocalStorageMdd.clearAll();
+                this.setStatusOutPut('No previous downloads to continue.');
+                submitBtn.innerText = "Start Downloading";
+            }
         });
     }
 
 
-    private async downLoadAll(nameInput: HTMLInputElement): Promise<void> {
+    /**
+     * Returns true if all files downloaded
+     * @private
+     */
+    private async downLoadAll(): Promise<boolean> {
         console.log(`downLoadAll`);
-        let zipFileName = nameInput.value;
-        const dateStr = MddUtils.generateDateString();
-        const docListKey = Settings.localStorageKeys.fileMetaData;
-        if (zipFileName) {
-            zipFileName = zipFileName.replace(' ', '_');
-        }
 
-        console.log("zipFileName: ", zipFileName);
         console.log("clientCode: ", Settings.clientCode);
 
         // Get the filenames, download url and isDownload status either fresh from server or localstorage
@@ -116,17 +162,43 @@ export class Miranda {
                 console.error(e);
                 alert(`Error while getting file metadata list ${e.message}`);
             }
-            return;
+            return false;
         }
 
-        while (fileNameDownloadUrlList.some(fds => !fds.isDownloaded)) {
-            console.info(`Starting download....`);
-            debugger;
-            const unDownloadedFiles = fileNameDownloadUrlList.filter(f => !f.isDownloaded);
-            let downloadedUrls = await this.downloadData(unDownloadedFiles);
-            console.info(`Downloaded files`, downloadedUrls);
+        const axiosClient = new Axios({
+            responseType: 'arraybuffer',
+            withCredentials: true,
+            headers: {
+                Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
+                'Accept-Language': 'en-US,en;q=0.9',
+                'Upgrade-Insecure-Requests': '1'
+            }
+        });
+
+
+        if (fileNameDownloadUrlList.some(fds => !fds.isDownloaded)) {
+
+            console.log('Downloading each document and placing it in a zip file for download. Max size 1 gigs');
+
+            const results = await makeBufferedRequests(axiosClient, fileNameDownloadUrlList.filter(fds => !fds.isDownloaded), Settings.maxDownloadBufferSize, this.logOutput);
+
+            this.setLogOutput(`Saving Zip...`);
+
+            const zip = new JSZip();
+            for (const dataFileName of results) {
+                console.log(`Adding file to zip.`);
+                zip.file(dataFileName.fileName, dataFileName.data);
+            }
+            console.log(`Finished adding files to zip`);
+
+            console.log(`Saving Zip File`);
+            const zipFile = await zip.generateAsync({type: "blob"});
+            fileSaver(zipFile, `${Settings.clientCode}.zip`);
+
+            //Update local storage with documents that have been downloaded.
+            const downloadedDocumentUrls = results.map(r => r.downloadUrl);
             fileNameDownloadUrlList = fileNameDownloadUrlList.map(f => {
-                if(downloadedUrls.some(url => url === f.downloadUrl)){
+                if (downloadedDocumentUrls.some(ddurl => ddurl == f.downloadUrl)) {
                     f.isDownloaded = true;
                 }
                 return f;
@@ -134,29 +206,16 @@ export class Miranda {
             LocalStorageMdd.setFileMetaDataInLocalStorage(fileNameDownloadUrlList);
         }
 
-        // const zip = new JSZip();
-        // console.log('Downloading each document and placing it in a zip file for download.');
-        //
-        //
-        // let fileNameUrlObj = fileNameDownloadUrlList[0];
-        // let fileName = fileNameUrlObj.fileName;
-        //
-        // const result = this.downloadDocument(fileNameUrlObj.downloadUrl);
-        //
-        //
-        // // tsc-ignore
-        // zip.file(fileName, result.response);
-        // console.log(`Finished`);
-        //
-        // console.log(`Saving Zip File`);
-        // const zipFile = await zip.generateAsync({type: "blob"});
-        // saveAs(zipFile, `${zipFileName}_${dateStr}.zip`);
-
-
-        console.log(`Finished all`);
-        if (confirm(`Finished! Can I clean up local storage?`)) {
-            LocalStorageMdd.clearAll();
+        console.log(`Finished download all in this batch`);
+        this.setLogOutput('Finished, download more if needed.');
+        const text = this.getDownloadStatusText(fileNameDownloadUrlList);
+        console.log(text);
+        this.setStatusOutPut(text);
+        if(fileNameDownloadUrlList.filter(f => !f.isDownloaded).length < 1) {
+            return true;
         }
+
+        return false;
     }
 
 
@@ -169,13 +228,9 @@ export class Miranda {
     private async getAllFileMetaData(): Promise<FileMetaData[]> | never {
         let fileNameDownloadUrlList: FileMetaData[] = [];
 
-        if (LocalStorageMdd.getFileMetaDataFromLocalStorage()) {
-            if (!confirm(`Saved downloaded file progress found in local storage. Do you want to continue were you left off?`)) {
-                LocalStorageMdd.clearAll();
-            }
-        }
-
         if (!LocalStorageMdd.getFileMetaDataFromLocalStorage()) {
+
+            this.setLogOutput(`Getting full list of files so we can save progress.`);
             let currentStart = 0;
             let currentRecordCount = 0;
             // Not sure what the response type is
@@ -188,25 +243,31 @@ export class Miranda {
                 throw new Error(Settings.errorMessages.NoFilesFound);
             } else {
 
-                console.info(`Got document list
+                let logText = `Got document list
                         recordsTotal: ${recordsTotal},
                         currentRecordCount: ${currentRecordCount},
-                        currentStart: ${currentStart}`);
+                        currentStart: ${currentStart}`;
+                this.setLogOutput(logText);
+                console.info(logText);
                 fileNameDownloadUrlList.unshift(...this.getFileNameUrlList(response));
                 currentRecordCount += response['data'].length;
 
                 while (recordsTotal > 0 && currentRecordCount < recordsTotal) {
                     currentStart += Settings.pageBy;
-                    console.info(`Getting next page
+                    logText = `Getting next page
                         recordsTotal: ${recordsTotal},
                         currentRecordCount: ${currentRecordCount},
-                        currentStart: ${currentStart}`);
+                        currentStart: ${currentStart}`;
+                    console.info(logText);
+                    this.setLogOutput(logText);
                     response = await this.getDocumentList(currentStart, Settings.pageBy).promise();
                     fileNameDownloadUrlList.unshift(...this.getFileNameUrlList(response));
                     currentRecordCount += response['data'].length;
                 }
 
-                console.info(`All document file data needed to download attained.`);
+                logText = `All document file data needed to download attained.`;
+                console.info(logText);
+                this.setLogOutput(logText);
                 console.log(fileNameDownloadUrlList);
                 if (fileNameDownloadUrlList.length !== recordsTotal) {
                     alert(`Total record count doesn't match filesToDownload length`);
@@ -374,125 +435,22 @@ export class Miranda {
 
     /**
      * Downloads one document
+     * @param axiosClient
      * @param downloadUrl
+     * @param filename
      */
-    private downloadDocument = (downloadUrl: string): DownloadDocumentResult => {
-        const xhr = new XMLHttpRequest();
-        return {
-            response: new Promise(function (resolve, reject) {
 
-                // Attach the abort signal to the XHR instance
-                xhr.withCredentials = true;
-                xhr.responseType = 'arraybuffer';
-                xhr.open("GET", `${Settings.endpoints.baseUrl}${downloadUrl}`);
-                xhr.setRequestHeader("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7");
-                xhr.setRequestHeader("Accept-Language", "en-US,en;q=0.9");
-                xhr.setRequestHeader("Upgrade-Insecure-Requests", "1");
-                xhr.onload = function () {
-                    if (this.status >= 200 && this.status < 300) {
-                        resolve(xhr.response);
-                    } else {
-                        reject({
-                            status: this.status,
-                            statusText: xhr.statusText
-                        });
-                    }
-                };
-                xhr.onerror = function () {
-                    reject({
-                        status: this.status,
-                        statusText: xhr.statusText
-                    });
-                };
-                xhr.send();
-            }),
-            xhr
-        };
+    private downloadDocument = (axiosClient, downloadUrl: string, filename: string): Promise<DataFilename> => {
+        return axiosClient.get(`${Settings.endpoints.baseUrl}${downloadUrl}`).then(result => <DataFilename>{data: result.data, fileName: filename, downloadUrl: downloadUrl });
     }
 
-
-    /**
-     * Downloads the list and returns the urls to the files it was able to download
-     * It will stop downloaded once the file is 2 gigs. So you will need to handle
-     * the remaining files.
-     * @param fileMetaDataList
-     */
-    private downloadData = async (fileMetaDataList: FileMetaData[]): Promise<string[]> => {
-        debugger;
-        const maxConcurrentRequests = 6;
-        const maxDataSize = (1 * 1024 * 1024 * 1024)/4; // 1 gigabytes in bytes
-        let totalDownloaded = 0;
-        const downloadedData: DownloadResult[] = [];
-
-        let downloadPromises: TempType[] = [];
-
-        for (let i = 0; i < fileMetaDataList.length; i++) {
-            const fileMetaData = fileMetaDataList[i];
-            if (totalDownloaded >= maxDataSize) {
-                console.log(`Reached max size of data. ${totalDownloaded} not downloading any more.`);
-                break;
-            }
-
-
-
-
-            if (downloadPromises.length >= maxConcurrentRequests) {
-                console.log(`Reached max requests ${downloadPromises.length}. Waiting for one to finish.`);
-                let url = await Promise.race(downloadPromises.map(x => x.finished));
-                url = url.replace('/v4/cl/web.php/../','');
-                const index = downloadPromises.map(d => d.ddr.xhr.responseURL.toLowerCase().replace("https://www.paycomonline.net/v4/cl/","")).indexOf(url.toLowerCase());
-                downloadPromises.splice(index, 1);
-                // Do we need to remove it?
-                console.log(`Finished waiting, max requests now at ${downloadPromises.length}`);
-            }
-
-
-            const downloadPromise = this.downloadDocument(fileMetaData.downloadUrl);
-            const promise = downloadPromise.response
-                .then((data) => {
-                    const _url = fileMetaData.downloadUrl;
-                    totalDownloaded += data.byteLength;
-                    console.log(`totalDownloaded data ${totalDownloaded}`);
-                    // Todo: not sure about the data type here.
-                    downloadedData.push(<DownloadResult>{url: fileMetaData.downloadUrl, data});
-
-                    if (totalDownloaded >= maxDataSize) {
-                        console.log(`Reached max size. Starting to cancel what ever is left.`);
-                        for (const remainingPromise of downloadPromises) {
-                            console.log(`Canceling...`);
-                            // Assuming a way to cancel requests
-                            remainingPromise.ddr.xhr.abort();
-                        }
-                    }
-                    return _url;
-                })
-                .catch((error) => {
-                    console.error(`Error fetching ${fileMetaData.downloadUrl}:`, error);
-                    return 'error';
-                });
-
-            downloadPromises.push({ddr: downloadPromise, finished: promise});
-        }
-
-        await Promise.all(downloadPromises.map(dp => dp.finished));
-        debugger;
-        console.log(`Preparing to zip ${downloadedData.length} files`);
-
-        // Create a zip file using jszip
-        const zip = new JSZip();
-        downloadedData.forEach(({ url, data }) => {
-            zip.file(url, data);
-        });
-
-        // StreamSaver.js to save the zip file
-        const fileStream = createWriteStream(`downloaded_data.zip`);
-        const writer = fileStream.getWriter();
-        const blob = await zip.generateAsync({ type: 'blob' });
-
-        await writer.write(blob);
-        await writer.close();
-
-        return downloadedData.map(d => d.url);
+    private getDownloadStatusText(fileNameDownloadUrlList: FileMetaData[]) {
+        const downloadCount = fileNameDownloadUrlList.filter(f => f.isDownloaded).length;
+        const notDownloadCount = fileNameDownloadUrlList.filter(f => !f.isDownloaded).length;
+        const percentDone = notDownloadCount < 1 ? 100 : (Math.abs(downloadCount / notDownloadCount) * 100).toFixed(2);
+        return`Downloaded count: ${downloadCount}
+         Not Downloaded count: ${notDownloadCount}
+         Percent Finished ${percentDone}%`;
     }
 
 }
