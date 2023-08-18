@@ -1,7 +1,5 @@
 import {DataFilename} from "./types";
-import {Axios} from "axios";
-
-
+const Buffer = require('buffer/').Buffer
 
 
 const makeRequest = async (url: string, axiosClient) => {
