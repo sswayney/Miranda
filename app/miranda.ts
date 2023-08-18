@@ -105,12 +105,12 @@ export class Miranda {
             document.body.removeChild(modal);
         }
 
-        console.log(`Close the modal if the user clicks outside of it`);
-        window.addEventListener("click", (event) => {
-            if (event.target === modal) {
-                closeModal();
-            }
-        });
+        // console.log(`Close the modal if the user clicks outside of it`);
+        // window.addEventListener("click", (event) => {
+        //     if (event.target === modal) {
+        //         closeModal();
+        //     }
+        // });
 
         console.log(`Function to handle form submission`);
         submitBtn.addEventListener("click", async () => {
