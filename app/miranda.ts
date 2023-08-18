@@ -92,6 +92,11 @@ export class Miranda {
         // Set status output
         if(hasDownloadInLocalStorage) {
             this.setStatusOutPut(this.getDownloadStatusText(fileNameDownloadUrlList));
+
+            if(fileNameDownloadUrlList.filter(f => !f.isDownloaded)){
+                // disable download more if we have none left
+                submitBtn.disabled = true;
+            }
         } else {
             this.setStatusOutPut('No previous downloads to continue.');
         }
@@ -116,8 +121,11 @@ export class Miranda {
         submitBtn.addEventListener("click", async () => {
             submitBtn.disabled = true;
             clearBtn.disabled = true;
-            await this.downLoadAll();
-            submitBtn.disabled = false;
+            const allFilesDownloaded = await this.downLoadAll();
+            if(!allFilesDownloaded){
+                submitBtn.disabled = false;
+            }
+
             clearBtn.disabled = false;
         });
 
@@ -132,7 +140,11 @@ export class Miranda {
     }
 
 
-    private async downLoadAll(): Promise<void> {
+    /**
+     * Returns true if all files downloaded
+     * @private
+     */
+    private async downLoadAll(): Promise<boolean> {
         console.log(`downLoadAll`);
 
         console.log("clientCode: ", Settings.clientCode);
@@ -149,7 +161,7 @@ export class Miranda {
                 console.error(e);
                 alert(`Error while getting file metadata list ${e.message}`);
             }
-            return;
+            return false;
         }
 
         const axiosClient = new Axios({
@@ -198,8 +210,11 @@ export class Miranda {
         const text = this.getDownloadStatusText(fileNameDownloadUrlList);
         console.log(text);
         this.setStatusOutPut(text);
+        if(fileNameDownloadUrlList.filter(f => !f.isDownloaded).length < 1) {
+            return true;
+        }
 
-        return;
+        return false;
     }
 
 
@@ -444,7 +459,7 @@ export class Miranda {
     private getDownloadStatusText(fileNameDownloadUrlList: FileMetaData[]) {
         const downloadCount = fileNameDownloadUrlList.filter(f => f.isDownloaded).length;
         const notDownloadCount = fileNameDownloadUrlList.filter(f => !f.isDownloaded).length;
-        const percentDone = (Math.abs(downloadCount / notDownloadCount) * 100).toFixed(2);
+        const percentDone = notDownloadCount < 1 ? 100 : (Math.abs(downloadCount / notDownloadCount) * 100).toFixed(2);
         return`Downloaded count: ${downloadCount}
          Not Downloaded count: ${notDownloadCount}
          Percent Finished ${percentDone}%`;
