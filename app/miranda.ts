@@ -40,22 +40,49 @@ export class Miranda {
         modalContent.style.borderRadius = "5px";
 
         console.log(`Create the form elements`);
-        const nameLabel = document.createElement("label");
-        nameLabel.setAttribute("for", "name");
-        nameLabel.innerText = "Zip File Name Prefix: ";
-        const nameInput = document.createElement("input");
-        nameInput.setAttribute("type", "text");
-        nameInput.setAttribute("id", "name");
+
+        // const nameLabel = document.createElement("label");
+        // nameLabel.setAttribute("for", "name");
+        // nameLabel.innerText = "Zip File Name Prefix: ";
+        //
+        // const nameInput = document.createElement("input");
+        // nameInput.setAttribute("type", "text");
+        // nameInput.setAttribute("id", "name");
+
+        const textOutput = document.createElement("p");
+        textOutput.setAttribute("id", "textOutput");
+
+        const fileNameDownloadUrlList = LocalStorageMdd.getFileMetaDataFromLocalStorage();
+        if(fileNameDownloadUrlList?.length > 0) {
+            const downloadedCount = fileNameDownloadUrlList.filter(f => f.isDownloaded).length;
+            const notDownloadedCount = fileNameDownloadUrlList.filter(f => !f.isDownloaded).length;
+            const percentDone = `${Math.abs(downloadedCount / notDownloadedCount) * 100}%`;
+            textOutput.innerText = `Downloaded count: ${downloadedCount}
+         Not Downloaded count: ${notDownloadedCount}
+         Percent Finished ${percentDone}`;
+        } else {
+            textOutput.innerText = 'No previous downloads to continue.';
+        }
 
 
         const submitBtn = document.createElement("button");
         submitBtn.setAttribute("id", "submitBtn");
-        submitBtn.innerText = "Download All";
+        submitBtn.innerText = fileNameDownloadUrlList.length > 0 ? "Download More" : "Start Downloading";
+
+        const clearBtn = document.createElement("button");
+        clearBtn.setAttribute("id", "clearBtn");
+        clearBtn.innerText = "Clear Local Storage History";
+        clearBtn.disabled = fileNameDownloadUrlList.length < 1;
 
         console.log(`Append the form elements to the modal content`);
-        modalContent.appendChild(nameLabel);
-        modalContent.appendChild(nameInput);
+        // modalContent.appendChild(nameLabel);
+        // modalContent.appendChild(nameInput);
+        // modalContent.appendChild(document.createElement("br"));
+        modalContent.appendChild(textOutput);
+        modalContent.appendChild(document.createElement("br"));
         modalContent.appendChild(submitBtn);
+        modalContent.appendChild(clearBtn);
+
 
         console.log(`Append the modal content to the modal`);
         modal.appendChild(modalContent);
@@ -64,7 +91,6 @@ export class Miranda {
         document.body.appendChild(modal);
 
         console.log(`Function to close the modal`);
-
         function closeModal() {
             modal.style.display = "none";
             console.log(`Remove the modal from the DOM after closing`);
@@ -80,19 +106,21 @@ export class Miranda {
 
         console.log(`Function to handle form submission`);
         submitBtn.addEventListener("click", async () => {
-            await this.downLoadAll(nameInput.value);
+            submitBtn.disabled = true;
+            await this.downLoadAll(textOutput);
+            submitBtn.disabled = false;
+        });
+
+        console.log(`Function to clear storage`);
+        clearBtn.addEventListener("click", async () => {
+            LocalStorageMdd.clearAll();
         });
     }
 
 
-    private async downLoadAll(zipFileName: string): Promise<void> {
+    private async downLoadAll(textOutput: HTMLParagraphElement): Promise<void> {
         console.log(`downLoadAll`);
-        const dateStr = MddUtils.generateDateString();
-        if (zipFileName) {
-            zipFileName = zipFileName.replace(' ', '_');
-        }
 
-        console.log("zipFileName: ", zipFileName);
         console.log("clientCode: ", Settings.clientCode);
 
         // Get the filenames, download url and isDownload status either fresh from server or localstorage
@@ -137,7 +165,7 @@ export class Miranda {
 
             console.log(`Saving Zip File`);
             const zipFile = await zip.generateAsync({type: "blob"});
-            fileSaver(zipFile, `${zipFileName}_${zipCount}.zip`);
+            fileSaver(zipFile, `${Settings.clientCode}.zip`);
 
             //Update local storage with documents that have been downloaded.
             const downloadedDocumentUrls = results.map(r => r.downloadUrl);
@@ -162,11 +190,10 @@ export class Miranda {
         console.log(`Downloaded count: ${downloadCount}
          Not Downloaded count: ${notDownloadCount}
          Percent Finished ${percentDone}%`);
-
-        alert(`Downloaded Percentage: ${percentDone}%`)
-        if (confirm(`Finished! Can I clean up local storage?`)) {
-            LocalStorageMdd.clearAll();
-        }
+        textOutput.innerText = `Downloaded count: ${downloadCount}
+         Not Downloaded count: ${notDownloadCount}
+         Percent Finished ${percentDone}%`;
+        return;
     }
 
 
