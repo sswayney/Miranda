@@ -198,17 +198,25 @@ export class Miranda {
 
             console.log(`Saving Zip File`);
             const zipFile = await zip.generateAsync({type: "blob"});
-            fileSaver(zipFile, `${Settings.clientCode}.zip`);
 
-            //Update local storage with documents that have been downloaded.
-            const downloadedDocumentUrls = results.map(r => r.downloadUrl);
-            fileNameDownloadUrlList = fileNameDownloadUrlList.map(f => {
-                if (downloadedDocumentUrls.some(ddurl => ddurl == f.downloadUrl)) {
-                    f.isDownloaded = true;
-                }
-                return f;
-            });
-            LocalStorageMdd.setFileMetaDataInLocalStorage(fileNameDownloadUrlList);
+
+            // Confirm the user can download right now. We don't want to set these files as download if they are not.
+            if(confirm('Your zip file is ready to download. Are you ready?')){
+                fileSaver(zipFile, `${Settings.clientCode}.zip`);
+
+                //Update local storage with documents that have been downloaded.
+                const downloadedDocumentUrls = results.map(r => r.downloadUrl);
+                fileNameDownloadUrlList = fileNameDownloadUrlList.map(f => {
+                    if (downloadedDocumentUrls.some(ddurl => ddurl == f.downloadUrl)) {
+                        f.isDownloaded = true;
+                    }
+                    return f;
+                });
+                LocalStorageMdd.setFileMetaDataInLocalStorage(fileNameDownloadUrlList);
+            } else {
+                this.setStatusOutPut('Download canceled.');
+                return false;
+            }
         }
 
         console.log(`Finished download all in this batch`);
