@@ -14,3 +14,9 @@ export interface AjaxRequestSettings {
     crossDomain: boolean;
     url: string;
 }
+
+export interface DataFilename {
+    data?: any;
+    fileName: string;
+    downloadUrl: string;
+}

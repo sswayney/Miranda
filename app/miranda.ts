@@ -1,18 +1,13 @@
 import {MddUtils} from "./utils";
-import {AjaxRequestSettings, FileMetaData} from "./types";
+import {AjaxRequestSettings, DataFilename, FileMetaData} from "./types";
 import {Settings} from "./settings";
 import * as JSZip from "jszip";
 import * as fileSaver from "file-saver"
 import {LocalStorageMdd} from "./local-storage";
-import {bufferCount, concatMap, forkJoin, from, lastValueFrom} from "rxjs";
-import {Axios, AxiosInstance} from 'axios';
+import {bufferCount, concatMap, forkJoin, from} from "rxjs";
+import {Axios} from 'axios';
+import {makeBufferedRequests} from "./buffered-request";
 
-
-interface DataFilename {
-    data: any;
-    fileName: string;
-    downloadUrl: string;
-}
 
 export class Miranda {
 
@@ -93,7 +88,6 @@ export class Miranda {
     private async downLoadAll(zipFileName: string): Promise<void> {
         console.log(`downLoadAll`);
         const dateStr = MddUtils.generateDateString();
-        const docListKey = Settings.localStorageKeys.fileMetaData;
         if (zipFileName) {
             zipFileName = zipFileName.replace(' ', '_');
         }
@@ -127,56 +121,46 @@ export class Miranda {
                 Connection: 'keep-alive'
             }
         });
+
+        const bufferSizeLimit = 2 * 1024 * 1024 * 1024; // 2G
         if (fileNameDownloadUrlList.some(fds => !fds.isDownloaded)) {
 
-            console.log('Downloading each document and placing it in a zip file for download.');
-            const requests = [];
-            for (let i = 0; i < fileNameDownloadUrlList.length && i < 100; i++){
-                const fileNameUrlObj = fileNameDownloadUrlList[i];
-                let fileName = fileNameUrlObj.fileName;
-                requests.unshift(this.downloadDocument(axiosClient, fileNameUrlObj.downloadUrl, fileName));
+            console.log('Downloading each document and placing it in a zip file for download. Max size 2 gigs');
+
+            const results = await makeBufferedRequests(axiosClient, fileNameDownloadUrlList, bufferSizeLimit);
+
+            const zip = new JSZip();
+            for (const dataFileName of results) {
+                console.log(`Adding file to zip.`);
+                debugger;
+                zip.file(dataFileName.fileName, dataFileName.data);
             }
+            console.log(`Finished adding files to zip`);
 
+            console.log(`Saving Zip File`);
+            const zipFile = await zip.generateAsync({type: "blob"});
+            fileSaver(zipFile, `${zipFileName}_${zipCount}.zip`);
 
-
-
-            from(requests).pipe(
-                bufferCount(50),
-                concatMap(buffer => forkJoin(buffer))
-            ).subscribe(async (results: DataFilename[]) => {
-
-                const zip = new JSZip();
-                for (const dataFileName of results) {
-                    console.log(`Adding file to zip.`);
-                    debugger;
-                    zip.file(dataFileName.fileName, dataFileName.data);
+            //Update local storage with documents that have been downloaded.
+            const downloadedDocumentUrls = results.map(r => r.downloadUrl);
+            fileNameDownloadUrlList = fileNameDownloadUrlList.map(f => {
+                if (downloadedDocumentUrls.some(ddurl => ddurl == f.downloadUrl)) {
+                    f.isDownloaded = true;
                 }
-                console.log(`Finished adding files to zip`);
-
-                console.log(`Saving Zip File`);
-                const zipFile = await zip.generateAsync({type: "blob"});
-                fileSaver(zipFile, `${zipFileName}_${zipCount}.zip`);
-
-                //Update local storage with documents that have been downloaded.
-                const downloadedDocumentUrls = results.map(r => r.downloadUrl);
-                fileNameDownloadUrlList = fileNameDownloadUrlList.map(f => {
-                    if (downloadedDocumentUrls.some(ddurl => ddurl == f.downloadUrl)) {
-                        f.isDownloaded = true;
-                    }
-                    return f;
-                });
-                LocalStorageMdd.setFileMetaDataInLocalStorage(fileNameDownloadUrlList);
-
-                zipCount++;
+                return f;
             });
+            LocalStorageMdd.setFileMetaDataInLocalStorage(fileNameDownloadUrlList);
+
+
 
             console.log(`Downloaded all files in this batch`);
 
             console.log(`Finished`);
         }
-
-
         console.log(`Finished all`);
+        const downloadCount = fileNameDownloadUrlList.filter(f => f.isDownloaded).length;
+
+        alert(`Downloaded Percentage: ${downloadCount / fileNameDownloadUrlList.length}%`)
         if (confirm(`Finished! Can I clean up local storage?`)) {
             LocalStorageMdd.clearAll();
         }
@@ -403,43 +387,7 @@ export class Miranda {
      */
 
     private downloadDocument = (axiosClient, downloadUrl: string, filename: string): Promise<DataFilename> => {
-
-
-
-
         return axiosClient.get(`${Settings.endpoints.baseUrl}${downloadUrl}`).then(result => <DataFilename>{data: result.data, fileName: filename, downloadUrl: downloadUrl });
-
-
-
-
-        // return new Promise(function (resolve, reject) {
-        //     let xhr = new XMLHttpRequest();
-        //     xhr.withCredentials = true;
-        //     xhr.responseType = 'arraybuffer';
-        //     xhr.open("GET", `${Settings.endpoints.baseUrl}${downloadUrl}`);
-        //     xhr.setRequestHeader("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7");
-        //     xhr.setRequestHeader("Accept-Language", "en-US,en;q=0.9");
-        //     xhr.setRequestHeader("Upgrade-Insecure-Requests", "1");
-        //     xhr.onload = function () {
-        //         if (this.status >= 200 && this.status < 300) {
-        //             resolve(<DataFilename>{data: xhr.response, fileName: filename, downloadUrl: downloadUrl });
-        //         } else {
-        //             reject({
-        //                 status: this.status,
-        //                 statusText: xhr.statusText
-        //             });
-        //         }
-        //     };
-        //     xhr.onerror = function () {
-        //         reject({
-        //             status: this.status,
-        //             statusText: xhr.statusText
-        //         });
-        //     };
-        //     xhr.send();
-        // });
-
-
     }
 
 }
