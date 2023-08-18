@@ -263,7 +263,7 @@ const mdd = {
     pageName: 'Dashboard',
     fullUrl: `https://www.paycomonline.net/v4/cl/web.php/Doc/Dashboard`,
     github: `https://github.com/sswayney/Miranda`,
-    pageBy: 25,
+    pageBy: 50,
     endpoints: {
         baseUrl: 'https://www.paycomonline.net',
         dashboard: '/v4/cl/web.php/Doc/Dashboard'
@@ -326,14 +326,6 @@ const mdd = {
 
             document.title = 'Miranda Document Download';
             $(window).on("error", mdd.error);
-            mdd.setup.applyStyles();
-            mdd.setup.applyCentral();
-        },
-        applyStyles: function () {
-
-        },
-        applyCentral: function () {
-
         },
         openModal: function () {
                 console.log(`Create the modal div and its content`);
@@ -399,71 +391,104 @@ const mdd = {
                 console.log(`Function to handle form submission`);
                 submitBtn.addEventListener("click", async () => {
                     let zipFileName = nameInput.value;
+                    const clientCode = window.ssoSessionInfo.clientCode;
+                    const docListKey = clientCode + '_mdd';
+                    const lastZipFileNumKey = clientCode + '_mdd_last_zip_num';
                     if(zipFileName){
                         zipFileName = zipFileName.replace(' ','_');
                     }
+                    const now = new Date();
+                    const dateStr = `${now.getFullYear()}-${now.getMonth() + 1}-${now.getDate()}-${now.getHours()}-${now.getMinutes()}-${now.getSeconds()}`;
 
                     console.log("zipFileName: ", name);
+                    console.log("clientCode: ", clientCode);
 
-                    const fileNameDownloadUrlList = [];
-                    let currentStart = 0;
-                    let currentRecordCount = 0;
-                    let response = await mdd.actions.getDocumentList(currentStart, mdd.pageBy).promise();
-                    console.log(response);
-                    const recordsTotal = +response['recordsTotal'];
+                    let fileNameDownloadUrlList = [];
 
-                    if(recordsTotal < 1){
-                        alert('Zero documents found');
-                        return;
-                    }
+                    if(!localStorage.getItem(docListKey)){
+                        let currentStart = 0;
+                        let currentRecordCount = 0;
+                        let response = await mdd.actions.getDocumentList(currentStart, mdd.pageBy).promise();
+                        console.log(response);
+                        const recordsTotal = +response['recordsTotal'];
 
-                    console.info(`Got document list
+                        if(recordsTotal < 1){
+                            alert('Zero documents found');
+                            return;
+                        }
+
+                        console.info(`Got document list
                         recordsTotal: ${recordsTotal},
                         currentRecordCount: ${currentRecordCount},
                         currentStart: ${currentStart}`);
-                    fileNameDownloadUrlList.unshift(...mdd.actions.getFileNameUrlList(response));
-                    currentRecordCount += response.data.length;
-
-                    while (recordsTotal > 0 && currentRecordCount < recordsTotal) {
-                        currentStart += mdd.pageBy;
-                        console.info(`Getting next page
-                        recordsTotal: ${recordsTotal},
-                        currentRecordCount: ${currentRecordCount},
-                        currentStart: ${currentStart}`);
-                        response = await mdd.actions.getDocumentList(currentStart,mdd.pageBy).promise();
                         fileNameDownloadUrlList.unshift(...mdd.actions.getFileNameUrlList(response));
                         currentRecordCount += response.data.length;
+
+                        while (recordsTotal > 0 && currentRecordCount < recordsTotal) {
+                            currentStart += mdd.pageBy;
+                            console.info(`Getting next page
+                        recordsTotal: ${recordsTotal},
+                        currentRecordCount: ${currentRecordCount},
+                        currentStart: ${currentStart}`);
+                            response = await mdd.actions.getDocumentList(currentStart,mdd.pageBy).promise();
+                            fileNameDownloadUrlList.unshift(...mdd.actions.getFileNameUrlList(response));
+                            currentRecordCount += response.data.length;
+                        }
+
+                        console.info(`All document file data needed to download attained.`);
+                        console.log(fileNameDownloadUrlList);
+                        if(fileNameDownloadUrlList.length !== recordsTotal){
+                            alert(`Total record count doesn't match filesToDownload length`);
+                        }
+
+                        const hasNoDownload = fileNameDownloadUrlList.filter(d => !d.downloadUrl);
+                        if(hasNoDownload.length > 0){
+                            console.log(`has no download`, hasNoDownload);
+                            alert(`${hasNoDownload.length} documents have no download, review in console`);
+                            fileNameDownloadUrlList = fileNameDownloadUrlList.filter(d => d.downloadUrl);
+                            if(!confirm(`Do you want to continue?`)){
+                                return;
+                            }
+                        }
+
+                        localStorage.setItem(docListKey, JSON.stringify(fileNameDownloadUrlList));
+                    } else {
+                        fileNameDownloadUrlList = JSON.parse(localStorage.getItem(docListKey));
+                        console.info(`Document list found in local storage`, fileNameDownloadUrlList);
                     }
 
-                    console.info(`All document file data needed to download attained.`);
-                    console.log(fileNameDownloadUrlList);
-                    if(fileNameDownloadUrlList.length !== recordsTotal){
-                        alert(`Total record count doesn't match filesToDownload length`);
-                    }
 
-                    const zip = new JSZip();
 
-                    console.log('Downloading each document and placing it in a zip file for download.');
+                    if(fileNameDownloadUrlList.some(fds => !fds.isDownloaded)){
 
-                    for(let i = 0; i < fileNameDownloadUrlList.length; i++){
-                        console.log(`Downloading ${i + 1} of ${fileNameDownloadUrlList.length}`);
-                        let fileNameUrlObj = fileNameDownloadUrlList[i];
+                        const zip = new JSZip();
+                        console.log('Downloading each document and placing it in a zip file for download.');
+
+
+                        let fileNameUrlObj = fileNameDownloadUrlList[0];
                         let fileName = fileNameUrlObj.fileName;
-                        console.log(`Downloading ${fileNameUrlObj.fileName} from ${fileNameUrlObj.downloadUrl}`);
 
                         const result = mdd.actions.downloadDocument(fileNameUrlObj.downloadUrl);
+
+
+
                         zip.file(fileName,result);
                         console.log(`Finished`);
+
+                        console.log(`Saving Zip File`);
+                        const zipFile = await zip.generateAsync({type:"blob"});
+                        saveAs(zipFile, `${zipFileName}_${dateStr}.zip`);
+
                     }
 
-                    console.log(`Saving Zip File`);
-                    zip.generateAsync({type:"blob"})
-                        .then(function(content) {
-                            const now = new Date();
-                            const dateStr = `${now.getFullYear()}-${now.getMonth() + 1}-${now.getDate()}-${now.getHours()}-${now.getMinutes()}-${now.getSeconds()}`;
-                            saveAs(content, `${zipFileName}_${dateStr}.zip`);
-                            closeModal();
-                        });
+
+
+                    console.log(`Finished all`);
+                    if(confirm(`Finished! Can I clean up local storage?`)){
+                        localStorage.removeItem(docListKey);
+                        localStorage.removeItem(lastZipFileNumKey);
+                    }
+
 
                 });
             }
@@ -500,81 +525,78 @@ const mdd = {
                 },
                 "data": {
                     "draw": "1",
-                    "columns[0][data]": "select_eecode_docid",
-                    "columns[0][name]": "select_eecode_docid",
-                    "columns[0][searchable]": "true",
-                    "columns[0][orderable]": "false",
-                    "": [
-                        "columns[0][search][value]=",
-                        "columns[1][search][value]=",
-                        "columns[2][search][value]=",
-                        "columns[3][search][value]=",
-                        "columns[4][search][value]=",
-                        "columns[5][search][value]=",
-                        "columns[6][search][value]=",
-                        "columns[7][search][value]=",
-                        "columns[8][search][value]=",
-                        "columns[9][search][value]=",
-                        "columns[10][search][value]=",
-                        "columns[11][search][value]=",
-                        "search[value]="
-                    ],
-                    "columns[0][search][regex]": "false",
-                    "columns[1][data]": "eename",
-                    "columns[1][name]": "eename",
-                    "columns[1][searchable]": "true",
-                    "columns[1][orderable]": "true",
-                    "columns[1][search][regex]": "false",
-                    "columns[2][data]": "eestatus",
-                    "columns[2][name]": "eestatus",
-                    "columns[2][searchable]": "true",
-                    "columns[2][orderable]": "true",
-                    "columns[2][search][regex]": "false",
-                    "columns[3][data]": "labor_allo",
-                    "columns[3][name]": "labor_allo",
-                    "columns[3][searchable]": "true",
-                    "columns[3][orderable]": "true",
-                    "columns[3][search][regex]": "false",
-                    "columns[4][data]": "foldername",
-                    "columns[4][name]": "foldername",
-                    "columns[4][searchable]": "true",
-                    "columns[4][orderable]": "true",
-                    "columns[4][search][regex]": "false",
-                    "columns[5][data]": "srcfile_desc",
-                    "columns[5][name]": "srcfile_desc",
-                    "columns[5][searchable]": "true",
-                    "columns[5][orderable]": "true",
-                    "columns[5][search][regex]": "false",
-                    "columns[6][data]": "version_number",
-                    "columns[6][name]": "version_number",
-                    "columns[6][searchable]": "false",
-                    "columns[6][orderable]": "true",
-                    "columns[6][search][regex]": "false",
-                    "columns[7][data]": "employeeAckSign",
-                    "columns[7][name]": "employeeAckSign",
-                    "columns[7][searchable]": "false",
-                    "columns[7][orderable]": "true",
-                    "columns[7][search][regex]": "false",
-                    "columns[8][data]": "supervisorAckSign",
-                    "columns[8][name]": "supervisorAckSign",
-                    "columns[8][searchable]": "false",
-                    "columns[8][orderable]": "true",
-                    "columns[8][search][regex]": "false",
-                    "columns[9][data]": "lastrmnddate",
-                    "columns[9][name]": "lastrmnddate",
-                    "columns[9][searchable]": "false",
-                    "columns[9][orderable]": "true",
-                    "columns[9][search][regex]": "false",
-                    "columns[10][data]": "modified_date",
-                    "columns[10][name]": "modified_date",
-                    "columns[10][searchable]": "true",
-                    "columns[10][orderable]": "true",
-                    "columns[10][search][regex]": "false",
-                    "columns[11][data]": "actions",
-                    "columns[11][name]": "actions",
-                    "columns[11][searchable]": "false",
-                    "columns[11][orderable]": "false",
-                    "columns[11][search][regex]": "false",
+                    'columns[0][data]': 'select_eecode_docid',
+                    'columns[0][name]': 'select_eecode_docid',
+                    'columns[0][searchable]': 'true',
+                    'columns[0][orderable]': 'false',
+                    'columns[0][search][value]=': '',
+                    'columns[0][search][regex]': 'false',
+                    'columns[1][data]': 'eename',
+                    'columns[1][name]': 'eename',
+                    'columns[1][searchable]': 'true',
+                    'columns[1][orderable]': 'true',
+                    'columns[1][search][value]=': '',
+                    'columns[1][search][regex]': 'false',
+                    'columns[2][data]': 'eestatus',
+                    'columns[2][name]': 'eestatus',
+                    'columns[2][searchable]': 'true',
+                    'columns[2][orderable]': 'true',
+                    'columns[2][search][value]=': '',
+                    'columns[2][search][regex]': 'false',
+                    'columns[3][data]': 'labor_allo',
+                    'columns[3][name]': 'labor_allo',
+                    'columns[3][searchable]': 'true',
+                    'columns[3][orderable]': 'true',
+                    'columns[3][search][value]=': '',
+                    'columns[3][search][regex]': 'false',
+                    'columns[4][data]': 'foldername',
+                    'columns[4][name]': 'foldername',
+                    'columns[4][searchable]': 'true',
+                    'columns[4][orderable]': 'true',
+                    'columns[4][search][value]=': '',
+                    'columns[4][search][regex]': 'false',
+                    'columns[5][data]': 'srcfile_desc',
+                    'columns[5][name]': 'srcfile_desc',
+                    'columns[5][searchable]': 'true',
+                    'columns[5][orderable]': 'true',
+                    'columns[5][search][value]=': '',
+                    'columns[5][search][regex]': 'false',
+                    'columns[6][data]': 'version_number',
+                    'columns[6][name]': 'version_number',
+                    'columns[6][searchable]': 'false',
+                    'columns[6][orderable]': 'true',
+                    'columns[6][search][value]=': '',
+                    'columns[6][search][regex]': 'false',
+                    'columns[7][data]': 'employeeAckSign',
+                    'columns[7][name]': 'employeeAckSign',
+                    'columns[7][searchable]': 'false',
+                    'columns[7][orderable]': 'true',
+                    'columns[7][search][value]=': '',
+                    'columns[7][search][regex]': 'false',
+                    'columns[8][data]': 'supervisorAckSign',
+                    'columns[8][name]': 'supervisorAckSign',
+                    'columns[8][searchable]': 'false',
+                    'columns[8][orderable]': 'true',
+                    'columns[8][search][value]=': '',
+                    'columns[8][search][regex]': 'false',
+                    'columns[9][data]': 'lastrmnddate',
+                    'columns[9][name]': 'lastrmnddate',
+                    'columns[9][searchable]': 'false',
+                    'columns[9][orderable]': 'true',
+                    'columns[9][search][value]=': '',
+                    'columns[9][search][regex]': 'false',
+                    'columns[10][data]': 'modified_date',
+                    'columns[10][name]': 'modified_date',
+                    'columns[10][searchable]': 'true',
+                    'columns[10][orderable]': 'true',
+                    'columns[10][search][value]=': '',
+                    'columns[10][search][regex]': 'false',
+                    'columns[11][data]': 'actions',
+                    'columns[11][name]': 'actions',
+                    'columns[11][searchable]': 'false',
+                    'columns[11][orderable]': 'false',
+                    'columns[11][search][value]=': '',
+                    'columns[11][search][regex]': 'false',
                     "start": ''+start,
                     "length": ''+length,
                     "search[regex]": "false",
@@ -616,7 +638,7 @@ const mdd = {
                 let fileName = `${userName}_${randStr}_${srcFileName}`.replace(/[/\\?%*:|"<>]/g, '_');
                 fileName = fileName.replace(/ /g, '_');
 
-                fileNameDownloadUrlList.unshift({fileName: fileName, downloadUrl: downloadUrl});
+                fileNameDownloadUrlList.unshift({fileName: fileName, downloadUrl: downloadUrl, isDownloaded: false});
             }
             return fileNameDownloadUrlList;
         },
@@ -648,7 +670,6 @@ const mdd = {
                 };
                 xhr.send();
             });
-
         }
     },
     ui: {
