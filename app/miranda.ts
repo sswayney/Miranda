@@ -124,14 +124,13 @@ export class Miranda {
         const bufferSizeLimit = 1 * 1024 * 1024 * 1024; // 1G
         if (fileNameDownloadUrlList.some(fds => !fds.isDownloaded)) {
 
-            console.log('Downloading each document and placing it in a zip file for download. Max size 2 gigs');
+            console.log('Downloading each document and placing it in a zip file for download. Max size 1 gigs');
 
             const results = await makeBufferedRequests(axiosClient, fileNameDownloadUrlList, bufferSizeLimit);
 
             const zip = new JSZip();
             for (const dataFileName of results) {
                 console.log(`Adding file to zip.`);
-                debugger;
                 zip.file(dataFileName.fileName, dataFileName.data);
             }
             console.log(`Finished adding files to zip`);
@@ -158,8 +157,13 @@ export class Miranda {
         }
         console.log(`Finished all`);
         const downloadCount = fileNameDownloadUrlList.filter(f => f.isDownloaded).length;
+        const notDownloadCount = fileNameDownloadUrlList.filter(f => !f.isDownloaded).length;
+        const percentDone = Math.abs(downloadCount / notDownloadCount)*100;
+        console.log(`Downloaded count: ${downloadCount}
+         Not Downloaded count: ${notDownloadCount}
+         Percent Finished ${percentDone}%`);
 
-        alert(`Downloaded Percentage: ${downloadCount / fileNameDownloadUrlList.length}%`)
+        alert(`Downloaded Percentage: ${percentDone}%`)
         if (confirm(`Finished! Can I clean up local storage?`)) {
             LocalStorageMdd.clearAll();
         }

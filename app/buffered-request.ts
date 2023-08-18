@@ -17,6 +17,7 @@ export const makeBufferedRequests = async (axiosClient, dataFileNames: DataFilen
     let bufferSizeCounter = 0;
 
     for (const df of dataFileNames) {
+        console.log(`Downloading ${df.fileName}`);
         const data = await makeRequest(df.downloadUrl, axiosClient);
 
         if (data !== null) {
