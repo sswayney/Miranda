@@ -122,8 +122,8 @@ export class Miranda {
             submitBtn.disabled = true;
             clearBtn.disabled = true;
             const allFilesDownloaded = await this.downLoadAll();
-            if(!allFilesDownloaded){
-                submitBtn.disabled = false;
+            if(allFilesDownloaded){
+                submitBtn.disabled = true;
                 this.setLogOutput('Finished downloading all.');
             }
 
