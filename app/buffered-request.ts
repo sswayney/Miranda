@@ -12,12 +12,15 @@ const makeRequest = async (url: string, axiosClient) => {
     }
 };
 
-export const makeBufferedRequests = async (axiosClient, dataFileNames: DataFilename[], bufferSize: number): Promise<DataFilename[]> => {
+export const makeBufferedRequests = async (axiosClient, dataFileNames: DataFilename[], bufferSize: number, logOutput: HTMLParagraphElement = null): Promise<DataFilename[]> => {
     const buffer: DataFilename[] = [];
     let bufferSizeCounter = 0;
 
     for (const df of dataFileNames) {
         console.log(`Downloading ${df.fileName}`);
+        if(logOutput){
+            logOutput.innerText = `Downloading ${df.fileName}`;
+        }
         const data = await makeRequest(df.downloadUrl, axiosClient);
 
         if (data !== null) {

@@ -4,19 +4,33 @@ import {Settings} from "./settings";
 import * as JSZip from "jszip";
 import * as fileSaver from "file-saver"
 import {LocalStorageMdd} from "./local-storage";
-import {bufferCount, concatMap, forkJoin, from} from "rxjs";
 import {Axios} from 'axios';
 import {makeBufferedRequests} from "./buffered-request";
 
 
 export class Miranda {
 
+    private statusOutput: HTMLParagraphElement;
+    private logOutput: HTMLParagraphElement;
+
     constructor() {
         console.info('Miranda Constructor Called. Opening Modal.');
         this.openModal();
 
     }
+
+    private setStatusOutPut(text: string): void {
+        this.statusOutput.innerText = text;
+    }
+
+    private setLogOutput(text: string): void {
+        this.logOutput.innerText = text;
+    }
+
     private openModal = () => {
+
+        // CREATE MODAL AND UI ELEMENTS
+
         console.log(`Create the modal div and its content`);
         const modal = document.createElement("div");
         modal.setAttribute("id", "myModal");
@@ -40,45 +54,28 @@ export class Miranda {
         modalContent.style.borderRadius = "5px";
 
         console.log(`Create the form elements`);
+        this.statusOutput = document.createElement("p");
+        this.statusOutput.setAttribute("id", "statusOutput");
 
-        // const nameLabel = document.createElement("label");
-        // nameLabel.setAttribute("for", "name");
-        // nameLabel.innerText = "Zip File Name Prefix: ";
-        //
-        // const nameInput = document.createElement("input");
-        // nameInput.setAttribute("type", "text");
-        // nameInput.setAttribute("id", "name");
+        this.logOutput = document.createElement("p");
+        this.logOutput.setAttribute("id", "logOutput");
 
-        const textOutput = document.createElement("p");
-        textOutput.setAttribute("id", "textOutput");
-
+        // Use what we may have in local storage to set ui texts.
         const fileNameDownloadUrlList = LocalStorageMdd.getFileMetaDataFromLocalStorage();
-        if(fileNameDownloadUrlList?.length > 0) {
-            const downloadedCount = fileNameDownloadUrlList.filter(f => f.isDownloaded).length;
-            const notDownloadedCount = fileNameDownloadUrlList.filter(f => !f.isDownloaded).length;
-            const percentDone = `${Math.abs(downloadedCount / notDownloadedCount) * 100}%`;
-            textOutput.innerText = `Downloaded count: ${downloadedCount}
-         Not Downloaded count: ${notDownloadedCount}
-         Percent Finished ${percentDone}`;
-        } else {
-            textOutput.innerText = 'No previous downloads to continue.';
-        }
-
+        const hasDownloadInLocalStorage = fileNameDownloadUrlList?.length > 0;
 
         const submitBtn = document.createElement("button");
         submitBtn.setAttribute("id", "submitBtn");
-        submitBtn.innerText = fileNameDownloadUrlList.length > 0 ? "Download More" : "Start Downloading";
+        submitBtn.innerText = hasDownloadInLocalStorage ? "Download More" : "Start Downloading";
 
         const clearBtn = document.createElement("button");
         clearBtn.setAttribute("id", "clearBtn");
         clearBtn.innerText = "Clear Local Storage History";
-        clearBtn.disabled = fileNameDownloadUrlList.length < 1;
+        clearBtn.disabled = !hasDownloadInLocalStorage;
 
         console.log(`Append the form elements to the modal content`);
-        // modalContent.appendChild(nameLabel);
-        // modalContent.appendChild(nameInput);
-        // modalContent.appendChild(document.createElement("br"));
-        modalContent.appendChild(textOutput);
+        modalContent.appendChild(this.statusOutput);
+        modalContent.appendChild(this.logOutput);
         modalContent.appendChild(document.createElement("br"));
         modalContent.appendChild(submitBtn);
         modalContent.appendChild(clearBtn);
@@ -89,6 +86,18 @@ export class Miranda {
 
         console.log(`Append the modal to the body`);
         document.body.appendChild(modal);
+
+
+
+
+        // Set status output
+        if(hasDownloadInLocalStorage) {
+            this.setStatusOutPut(this.getDownloadStatusText(fileNameDownloadUrlList));
+        } else {
+            this.setStatusOutPut('No previous downloads to continue.');
+        }
+
+        //// SET UP EVENTS
 
         console.log(`Function to close the modal`);
         function closeModal() {
@@ -107,18 +116,23 @@ export class Miranda {
         console.log(`Function to handle form submission`);
         submitBtn.addEventListener("click", async () => {
             submitBtn.disabled = true;
-            await this.downLoadAll(textOutput);
+            clearBtn.disabled;
+            await this.downLoadAll();
             submitBtn.disabled = false;
+            clearBtn.disabled;
         });
 
         console.log(`Function to clear storage`);
         clearBtn.addEventListener("click", async () => {
-            LocalStorageMdd.clearAll();
+            if(confirm(`Are you sure you want to clear your current download status? You will start from the start.`)){
+                LocalStorageMdd.clearAll();
+                this.setStatusOutPut('No previous downloads to continue.');
+            }
         });
     }
 
 
-    private async downLoadAll(textOutput: HTMLParagraphElement): Promise<void> {
+    private async downLoadAll(): Promise<void> {
         console.log(`downLoadAll`);
 
         console.log("clientCode: ", Settings.clientCode);
@@ -138,7 +152,6 @@ export class Miranda {
             return;
         }
 
-        let zipCount = 1;
         const axiosClient = new Axios({
             responseType: 'arraybuffer',
             withCredentials: true,
@@ -149,12 +162,14 @@ export class Miranda {
             }
         });
 
-        const bufferSizeLimit = 1 * 1024 * 1024 * 1024; // 1G
+
         if (fileNameDownloadUrlList.some(fds => !fds.isDownloaded)) {
 
             console.log('Downloading each document and placing it in a zip file for download. Max size 1 gigs');
 
-            const results = await makeBufferedRequests(axiosClient, fileNameDownloadUrlList.filter(fds => !fds.isDownloaded), bufferSizeLimit);
+            const results = await makeBufferedRequests(axiosClient, fileNameDownloadUrlList.filter(fds => !fds.isDownloaded), Settings.maxDownloadBufferSize, this.logOutput);
+
+            this.setLogOutput(`Saving Zip...`);
 
             const zip = new JSZip();
             for (const dataFileName of results) {
@@ -176,23 +191,14 @@ export class Miranda {
                 return f;
             });
             LocalStorageMdd.setFileMetaDataInLocalStorage(fileNameDownloadUrlList);
-
-
-
-            console.log(`Downloaded all files in this batch`);
-
-            console.log(`Finished`);
         }
-        console.log(`Finished all`);
-        const downloadCount = fileNameDownloadUrlList.filter(f => f.isDownloaded).length;
-        const notDownloadCount = fileNameDownloadUrlList.filter(f => !f.isDownloaded).length;
-        const percentDone = Math.abs(downloadCount / notDownloadCount)*100;
-        console.log(`Downloaded count: ${downloadCount}
-         Not Downloaded count: ${notDownloadCount}
-         Percent Finished ${percentDone}%`);
-        textOutput.innerText = `Downloaded count: ${downloadCount}
-         Not Downloaded count: ${notDownloadCount}
-         Percent Finished ${percentDone}%`;
+
+        console.log(`Finished download all in this batch`);
+        this.setLogOutput('Finished, download more in needed.');
+        const text = this.getDownloadStatusText(fileNameDownloadUrlList);
+        console.log(text);
+        this.setStatusOutPut(text);
+
         return;
     }
 
@@ -418,6 +424,15 @@ export class Miranda {
 
     private downloadDocument = (axiosClient, downloadUrl: string, filename: string): Promise<DataFilename> => {
         return axiosClient.get(`${Settings.endpoints.baseUrl}${downloadUrl}`).then(result => <DataFilename>{data: result.data, fileName: filename, downloadUrl: downloadUrl });
+    }
+
+    private getDownloadStatusText(fileNameDownloadUrlList: FileMetaData[]) {
+        const downloadCount = fileNameDownloadUrlList.filter(f => f.isDownloaded).length;
+        const notDownloadCount = fileNameDownloadUrlList.filter(f => !f.isDownloaded).length;
+        const percentDone = (Math.abs(downloadCount / notDownloadCount) * 100).toFixed(2);
+        return`Downloaded count: ${downloadCount}
+         Not Downloaded count: ${notDownloadCount}
+         Percent Finished ${percentDone}%`;
     }
 
 }
