@@ -138,6 +138,11 @@ export class Miranda {
                 submitBtn.innerText = "Start Downloading";
             }
         });
+
+        window.onbeforeunload = function() {
+            // return a string to prevent the page from unloading
+            return "Are you sure you want to leave?";
+        };
     }
 
 
