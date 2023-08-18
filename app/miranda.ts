@@ -126,7 +126,7 @@ export class Miranda {
 
             console.log('Downloading each document and placing it in a zip file for download. Max size 1 gigs');
 
-            const results = await makeBufferedRequests(axiosClient, fileNameDownloadUrlList, bufferSizeLimit);
+            const results = await makeBufferedRequests(axiosClient, fileNameDownloadUrlList.filter(fds => !fds.isDownloaded), bufferSizeLimit);
 
             const zip = new JSZip();
             for (const dataFileName of results) {
