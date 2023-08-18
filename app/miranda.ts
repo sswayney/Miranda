@@ -93,7 +93,7 @@ export class Miranda {
         if(hasDownloadInLocalStorage) {
             this.setStatusOutPut(this.getDownloadStatusText(fileNameDownloadUrlList));
 
-            if(fileNameDownloadUrlList.filter(f => !f.isDownloaded)){
+            if(fileNameDownloadUrlList.filter(f => !f.isDownloaded).length < 1){
                 // disable download more if we have none left
                 submitBtn.disabled = true;
             }
