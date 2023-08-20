@@ -1,4 +1,5 @@
 import {DataFilename} from "./types";
+
 const Buffer = require('buffer/').Buffer
 
 
@@ -18,7 +19,7 @@ export const makeBufferedRequests = async (axiosClient, dataFileNames: DataFilen
 
     for (const df of dataFileNames) {
         console.log(`Downloading ${df.fileName}`);
-        if(logOutput){
+        if (logOutput) {
             logOutput.innerText = `Downloading ${df.fileName}`;
         }
         const data = await makeRequest(df.downloadUrl, axiosClient);

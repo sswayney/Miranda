@@ -90,10 +90,10 @@ export class Miranda {
         document.body.appendChild(modal);
 
         // Set status output
-        if(hasDownloadInLocalStorage) {
+        if (hasDownloadInLocalStorage) {
             this.setStatusOutPut(this.getDownloadStatusText(fileNameDownloadUrlList));
 
-            if(fileNameDownloadUrlList.filter(f => !f.isDownloaded).length < 1){
+            if (fileNameDownloadUrlList.filter(f => !f.isDownloaded).length < 1) {
                 // disable download more if we have none left
                 submitBtn.disabled = true;
             }
@@ -104,25 +104,19 @@ export class Miranda {
         //// SET UP EVENTS
 
         console.log(`Function to close the modal`);
+
         function closeModal() {
             modal.style.display = "none";
             console.log(`Remove the modal from the DOM after closing`);
             document.body.removeChild(modal);
         }
 
-        // console.log(`Close the modal if the user clicks outside of it`);
-        // window.addEventListener("click", (event) => {
-        //     if (event.target === modal) {
-        //         closeModal();
-        //     }
-        // });
-
         console.log(`Function to handle form submission`);
         submitBtn.addEventListener("click", async () => {
             submitBtn.disabled = true;
             clearBtn.disabled = true;
             const allFilesDownloaded = await this.downLoadAll();
-            if(allFilesDownloaded){
+            if (allFilesDownloaded) {
                 submitBtn.disabled = true;
                 this.setLogOutput('Finished downloading all.');
             }
@@ -132,14 +126,14 @@ export class Miranda {
 
         console.log(`Function to clear storage`);
         clearBtn.addEventListener("click", async () => {
-            if(confirm(`Are you sure you want to clear your current download status? You will start from the start.`)){
+            if (confirm(`Are you sure you want to clear your current download status? You will start from the start.`)) {
                 LocalStorageMdd.clearAll();
                 this.setStatusOutPut('No previous downloads to continue.');
                 submitBtn.innerText = "Start Downloading";
             }
         });
 
-        window.onbeforeunload = function() {
+        window.onbeforeunload = function () {
             // return a string to prevent the page from unloading
             return "Are you sure you want to leave?";
         };
@@ -159,9 +153,9 @@ export class Miranda {
         let fileNameDownloadUrlList: FileMetaData[] = [];
         try {
             fileNameDownloadUrlList = await this.getAllFileMetaData();
-        } catch (e){
+        } catch (e) {
             // check if its one of our errors as they are predicted
-            if(Object.keys(Settings.errorMessages).map(k => Settings.errorMessages[k]).some(m => m == e.message)){
+            if (Object.keys(Settings.errorMessages).map(k => Settings.errorMessages[k]).some(m => m == e.message)) {
                 console.warn(e.message);
             } else {
                 console.error(e);
@@ -201,7 +195,7 @@ export class Miranda {
 
 
             // Confirm the user can download right now. We don't want to set these files as download if they are not.
-            if(confirm('Your zip file is ready to download. Are you ready?')){
+            if (confirm('Your zip file is ready to download. Are you ready?')) {
                 fileSaver(zipFile, `${Settings.clientCode}.zip`);
 
                 //Update local storage with documents that have been downloaded.
@@ -224,7 +218,7 @@ export class Miranda {
         const text = this.getDownloadStatusText(fileNameDownloadUrlList);
         console.log(text);
         this.setStatusOutPut(text);
-        if(fileNameDownloadUrlList.filter(f => !f.isDownloaded).length < 1) {
+        if (fileNameDownloadUrlList.filter(f => !f.isDownloaded).length < 1) {
             return true;
         }
 
@@ -454,7 +448,11 @@ export class Miranda {
      */
 
     private downloadDocument = (axiosClient, downloadUrl: string, filename: string): Promise<DataFilename> => {
-        return axiosClient.get(`${Settings.endpoints.baseUrl}${downloadUrl}`).then(result => <DataFilename>{data: result.data, fileName: filename, downloadUrl: downloadUrl });
+        return axiosClient.get(`${Settings.endpoints.baseUrl}${downloadUrl}`).then(result => <DataFilename>{
+            data: result.data,
+            fileName: filename,
+            downloadUrl: downloadUrl
+        });
     }
 
     private getDownloadStatusText(fileNameDownloadUrlList: FileMetaData[]) {
@@ -462,7 +460,7 @@ export class Miranda {
         const notDownloadCount = fileNameDownloadUrlList.filter(f => !f.isDownloaded).length;
         const totalCount = fileNameDownloadUrlList.length;
         const percentDone = totalCount < 1 ? 100 : (Math.abs(downloadCount / totalCount) * 100).toFixed(2);
-        return`Downloaded count: ${downloadCount}
+        return `Downloaded count: ${downloadCount}
          Not Downloaded count: ${notDownloadCount}
          Total to download count: ${totalCount}
          Percent Finished ${percentDone}%`;

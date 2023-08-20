@@ -1,4 +1,3 @@
-
 export class MddUtils {
 
     // Checks if the string contains html
