@@ -119,6 +119,8 @@ export class Miranda {
             if (allFilesDownloaded) {
                 submitBtn.disabled = true;
                 this.setLogOutput('Finished downloading all.');
+            } else {
+                submitBtn.disabled = false;
             }
 
             clearBtn.disabled = false;
